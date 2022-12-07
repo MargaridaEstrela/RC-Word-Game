@@ -107,7 +107,7 @@ int main(int argc, char *argv[]) {
   string command;
 
   int n_trials = -1;
-  string PLID;
+  string PLID="";
   int n_letters;
   char* guessed;
 
@@ -120,22 +120,21 @@ int main(int argc, char *argv[]) {
     while (ss >> word){
 	    if (f_counter > 1){
 		    cerr << "ERROR: Too many command fields. Check the proper command format\n";
-		    exit(EXIT_FAILURE);
+		    f_counter = 3;
+		    break;
 	    }
 	    fields[f_counter] = word;
 	    f_counter++;
     }
 
-
+    if (f_counter == 3){continue;}
     command = fields[0];
 
     if (command == "start" || command == "sg") {
 	    if (fields[1]==""){
 		    cerr << "ERROR: No PLID was given\n";
-		    exit(EXIT_FAILURE);
+		    continue;
 	    }
-	    PLID = fields[1];
-	    cout << "PLID:" << PLID << "\n";
 	    string request = "SNG " + fields[1] + "\n";
 	    string response = UDP_send_receive(request);
 	    stringstream rr(response);
@@ -147,6 +146,7 @@ int main(int argc, char *argv[]) {
 	    rr >> word;
 	    string output;
 	    if (word == "OK"){
+		    PLID = fields[1];
 		    string n_misses;
 		    rr >> n_letters;
 		    rr >> n_misses;
@@ -172,14 +172,17 @@ int main(int argc, char *argv[]) {
 
 	    //FALTA COLOCAR TODAS AS LETRAS RECEBIDAS EM MAISCULAS SEMPRE, PARA NAO HAVER 
 	    //PROBLEMAS DE COERENCIA NO JOGO
-	    //FALTA ACABAR O RESTO DOS STATUS DE RESPOSTA
+	    if (PLID == ""){
+		    cerr << "ERROR: No player has yet started any games (PLID = NULL)\n";
+		    continue;
+           }
 	    if (fields[1]==""){
                     cerr << "ERROR: No letter was given\n";
-                    exit(EXIT_FAILURE);
+                    continue;
             }
             if ((int) fields[1].size() > 1 || isalpha(fields[1][0])==0){
 		    cerr << "ERROR: Input given is not a letter\n";
-		    exit(EXIT_FAILURE);
+		    continue;
 	    }
 
 	    n_trials++;
@@ -211,35 +214,109 @@ int main(int argc, char *argv[]) {
 			}
 			output = output + guessed[j] + " ";
         	    }
-		    cout << "Yes, \"" + fields[1] +"\" is part of the word: " + output;
+		    cout << "Yes, \"" + fields[1] +"\" is part of the word: " + output + "\n";
 
-	    }		    
+	    }
+
+	    if (word == "WIN"){
+		    string output = "";
+		    for (int j=0; j<n_letters; j++){
+			if (guessed[j]=='_'){
+				guessed[j] = fields[1].at(0);
+			}
+			output = output + guessed[j];
+	    	    }		
+		    cout << "WELL DONE! The word was: " + output + "\n";
+		    n_trials = -1;
+		    delete[] guessed;
+	    }
+	    if (word == "DUP"){
+		    cout << "The letter \"" + fields[1] + "\" has already been played. Try a new one\n";
+		    n_trials--;
+	    }
+	    if (word == "NOK"){
+		    cout << "The letter \"" + fields[1] + "\" is not part of the word. Try again\n";
+            }
+	    if (word == "OVR"){
+		    cout << "GAME OVER! You have reached the max error limit for this word. Play another round?\n";
+		    n_trials = -1;
+		    delete[] guessed;
+	    }
+	    if (word == "INV"){//Ainda nao sei o que meter aqui, se dou so print da mensagem
+		               //de erro, ou se termino logo o jogo, ou se ha alguma maneira
+			       //de meter o numero de trials como deve de ser, depois exploro melhor
+	    }
+	    if (word == "ERR"){
+		    cerr << "ERROR: The 'play' command was rejected by the server. Check if there is an ongoing game with the 'state' command\n";
+		    continue;
+	    } 
 
     } else if (command == "guess" || command == "gw") {
+	   //Falta impedir que palavras tenham menos de 3 letras e mais de 30 (servidor nao aceita)
+	    if (PLID == ""){
+		    cerr << "ERROR: No player has yet started any games (PLID = NULL)\n";
+		    continue;
+           }
 	    if (fields[1]==""){
 		    cerr << "ERROR: No guess word was given\n";
+		    continue;
+	    }
+
+	    n_trials++;
+	    string request = "PWG " + PLID + " " + fields[1] + " " + to_string(n_trials) + "\n";
+	    cout << request;
+	    string response = UDP_send_receive(request);
+	    cout << response;
+	    stringstream rr(response);
+
+	    rr >> word;
+	    if (word != "RWG"){
+		    cerr << "ERROR: Wrong Protocol Message Received. Terminating connection\n";
 		    exit(EXIT_FAILURE);
 	    }
-	    string guess = fields[1];
+	    rr >> word;
+
+	    if (word == "WIN"){	
+		    cout << "WELL DONE! You guessed: " + fields[1] + "\n";
+		    n_trials = -1;
+		    delete[] guessed;
+	    }
+	    if (word == "NOK"){
+		    cout << "The guess \"" + fields[1] + "\" is not the hidden word. Try again\n";
+            }
+	    if (word == "OVR"){
+		    cout << "GAME OVER! You have reached the max error limit for this word. Play another round?\n";
+		    n_trials = -1;
+		    delete[] guessed;
+		    continue;
+	    }
+	    if (word == "INV"){//Ainda nao sei o que meter aqui, se dou so print da mensagem
+		               //de erro, ou se termino logo o jogo, ou se ha alguma maneira
+			       //de meter o numero de trials como deve de ser, depois exploro melhor
+	    }
+	    if (word == "ERR"){
+		    cerr << "ERROR: The 'guess' command was rejected by the server. Check if there is an ongoing game with the 'state' command\n";
+		    continue;
+	    } 
     } else if (command == "scoreboard" || command == "sb") {
 	    if (fields[1]!=""){
 		    cerr << "ERROR: Argument not required in this command\n";
-		    exit(EXIT_FAILURE);
+		    continue;
 	    }
     } else if (command == "hint" || command == "h") {
 	    if (fields[1]!=""){
 		    cerr << "ERROR: Argument not required in this command\n";
-		    exit(EXIT_FAILURE);
+		    continue;
 	    }
     } else if (command == "state" || command == "st") {
 	    if (fields[1]!=""){
 		    cerr << "ERROR: Argument not required in this command\n";
-		    exit(EXIT_FAILURE);
+		    continue;
 	    }
     } else if (command == "quit") {
 	    if (fields[1]!=""){
 		    cerr << "ERROR: Argument not required in this command\n";
-		    exit(EXIT_FAILURE);
+		    continue;
 	    }
 	    if (n_trials != -1){
 	    	string request = "QUT " + PLID + "\n";
@@ -271,7 +348,7 @@ int main(int argc, char *argv[]) {
     }else if (command == "exit") {
 	    if (fields[1]!=""){
 		    cerr << "ERROR: Argument not required in this command\n";
-		    exit(EXIT_FAILURE);
+		    continue;
 	    }
 	    if (n_trials != -1){
 	    	string request = "QUT " + PLID + "\n";
@@ -299,9 +376,7 @@ int main(int argc, char *argv[]) {
 	    cout << "Exiting player application. Until next time!\n";
             exit(EXIT_SUCCESS);
     } else {
-      //FAZER ESTE DEFAULT FECHAR A APLICACAO COMO A FUNCAO EXIT, PARA NAO HAVER PROBLEMAS DEPOIS
       cerr << "ERROR: Command name not known\n";
-      exit(EXIT_FAILURE);
     }
     delete[] fields;
   }
