@@ -56,11 +56,16 @@ int main(int argc, char *argv[]) {
   decoder(argc, argv);
 
   udp_pid = fork();
+
   if (udp_pid == 0) {
-    // TO_DO
+    // TO VERIFY
     execl("./server_udp", "./server_udp", word.c_str(), GSPORT.c_str(), verbose);
     cerr << "ERROR: cannot execute UDP server\n";
+    exit(EXIT_FAILURE);
+  } else if (udp_pid == -1) {
+    exit(EXIT_FAILURE);
   }
+
 
   //samething for TCP
   

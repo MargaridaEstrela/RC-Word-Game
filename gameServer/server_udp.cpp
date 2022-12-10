@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <string>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -29,8 +30,9 @@ struct sockaddr_in addr;
 socklen_t addrlen;
 
 string PLID;
-string word;
-int status = 0;
+int status = 0; // no to be here
+int trials = 0; // not to be here
+char *guess;
 
 
 void setup_udp(void){
@@ -77,8 +79,7 @@ int max_errors(int word_size) {
 void process(){
 
   char request[MAX_COMMAND_LINE];
-  char response[MAX_COMMAND_LINE];
-  int status;
+  string response;
 
   while (1) {
 
@@ -109,19 +110,66 @@ void process(){
         cerr << "PLID: bad format. PLID is always sent using 6 digits.\n";
         exit(EXIT_FAILURE);
       }
+
       PLID = arg2;
+      
+      // status will be the output from register_user
+      // we'll have a file just for register, unregister, etc.
+
 
       // check if PLID has any ongoing game (whit play moves)
 
       switch(status) {
         case STATUS_OK:
-          strcpy(response, "RSG OK\0");
+          response = "RSG OK " + std::to_string(max_errors(word.length()));
           break;
         case STATUS_NOK:
-        // checks if player PLID has any ongoing game (with play moves)
-        break;
+          response = "RSG NOK"; 
+          // checks if player PLID has any ongoing game (with play moves)
+          break;
       }
     } else if (!strcmp(arg1, "PLG")) {
+
+      int n = 0;
+      char letter = arg3[0];
+      
+      for (int i = 0; i < word.length(); i++) {
+        if (letter == word[i]) { // não gosto disto assim mas por agora deve funcionar
+          n ++;
+        }
+      }
+
+      switch(status) {
+        case STATUS_OK:
+          response = "RLG OK " + to_string(letter) + " " + to_string(n) + "\0";
+          break;
+        case STATUS_WIN:
+          response = "RLG NOK\0"; 
+          // checks if player PLID has any ongoing game (with play moves)
+          break;
+        case STATUS_DUP:
+          response = "RLG NOK\0"; 
+          // checks if player PLID has any ongoing game (with play moves)
+          break;
+        case STATUS_NOK:
+          response = "RLG NOK\0"; 
+          // checks if player PLID has any ongoing game (with play moves)
+          break;
+        case STATUS_OVR:
+          response = "RLG NOK\0"; 
+          // checks if player PLID has any ongoing game (with play moves)
+          break;
+        case STATUS_INV:
+          response = "RLG NOK\0"; 
+          // checks if player PLID has any ongoing game (with play moves)
+          break;
+        case STATUS_ERR:
+          response = "RLG NOK\0"; 
+          // checks if player PLID has any ongoing game (with play moves)
+          break;
+      }
+
+
       
 
     } else if (!strcmp(arg1, "PWG")) {
@@ -137,7 +185,7 @@ void process(){
     
 
     // SEND RESPONSE
-    n = sendto(fd, response, strlen(response) + 1, 0, (struct sockaddr *)&addr, addrlen);
+    n = sendto(fd, response.c_str(), strlen(response.c_str())*sizeof(char), 0, (struct sockaddr *)&addr, addrlen);
     if (n < 0) {
       perror("sendto failed");
       exit(EXIT_FAILURE);
@@ -158,6 +206,7 @@ void end_UDP_session() {
 int main(int argc, char *argv[]) {
 
   word = argv[1];
+  guess = new char[word.length()];
   GSPORT = argv[2];
   verbose = argv[3];
 
