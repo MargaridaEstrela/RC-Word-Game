@@ -29,6 +29,7 @@ struct sockaddr_in addr;
 socklen_t addrlen;
 
 string PLID;
+string word;
 int status = 0;
 
 
@@ -60,6 +61,16 @@ void setup_udp(void){
   }
 
   return;
+}
+
+int max_errors(int word_size) {
+  if (word_size <= 6) {
+    return 7;
+  } else if (word_size > 6 & word_size <= 10) {
+    return 8;
+  } else {
+    return 9;
+  }
 }
 
 
@@ -99,6 +110,8 @@ void process(){
         exit(EXIT_FAILURE);
       }
       PLID = arg2;
+
+      // check if PLID has any ongoing game (whit play moves)
 
       switch(status) {
         case STATUS_OK:
@@ -144,8 +157,9 @@ void end_UDP_session() {
 
 int main(int argc, char *argv[]) {
 
-  GSPORT = argv[1];
-  verbose = argv[2];
+  word = argv[1];
+  GSPORT = argv[2];
+  verbose = argv[3];
 
   setup_udp();
   process();

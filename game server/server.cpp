@@ -27,7 +27,7 @@ pid_t tcp_pid;
 
 
 // FUNCTIONS
-void flag_decoder(int argc, char *argv[]) {
+void decoder(int argc, char *argv[]) {
 
   if (argc == 2) {
     word = argv[1];
@@ -53,12 +53,12 @@ void flag_decoder(int argc, char *argv[]) {
 
 int main(int argc, char *argv[]) {
   
-  flag_decoder(argc, argv);
+  decoder(argc, argv);
 
   udp_pid = fork();
   if (udp_pid == 0) {
     // TO_DO
-    execl("./server_udp", "./server_udp", GSPORT.c_str(), verbose);
+    execl("./server_udp", "./server_udp", word.c_str(), GSPORT.c_str(), verbose);
     cerr << "ERROR: cannot execute UDP server\n";
   }
 
