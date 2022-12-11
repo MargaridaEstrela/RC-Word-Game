@@ -55,10 +55,8 @@ void TCP_read_to_file(int fd,string filename,int byte_size,string prefix){
   ssize_t n;
 
   ofstream file(filename);
-  cout << "1\n";
   file << prefix; 
 
-  cout << "2\n";
   string response;
   while(byte_size > 0){
     response = "";
@@ -429,7 +427,6 @@ int main(int argc, char *argv[]) {
         continue;
       }
       string response = TCP_send_receive("GSB\n");
-      cout << response;
       stringstream rr(response);
       int fd;
       string code;
@@ -469,7 +466,6 @@ int main(int argc, char *argv[]) {
         continue;
       }
       string response = TCP_send_receive("GHL " + PLID + "\n");
-      cout << response;
       stringstream rr(response);
       int fd;
       string code;
@@ -505,7 +501,6 @@ int main(int argc, char *argv[]) {
         continue;
       }
       string response = TCP_send_receive("STA " + PLID +"\n");
-      cout << response;
 
       stringstream rr(response);
       int fd;
@@ -523,27 +518,27 @@ int main(int argc, char *argv[]) {
 	cout << "No games have been played by this player (PLID = " + PLID + ")\n";
 	close (fd);
       }
-      else{
+      else if (status == "ACT" || status == "FIN"){
 	string filename;
 	int size;
-	string prefix;
+	string prefix="";
+	string word;
 	rr >> filename;
 	rr >> size;
-	rr >> prefix;
-	if (status == "ACT"){
-	  cout << "There is currently an ongoing game. Its summary is shown below:\n";
+	while (rr >> word){
+	  prefix = prefix + word + " ";
 	}
-	else if (status == "FIN"){
-          cout << "No ongoing games at the moment. The summary for the last finished game is shown below:\n";
-	}
+	prefix.pop_back();
         TCP_read_to_file(fd,filename,size,prefix);
         ifstream file(filename);
 	if( file.is_open()){
-	  cout << file.rdbuf();
+         cout << file.rdbuf();
 	}
        
         file.close();	
-        cout << "Local copy of the state file saved in file: " + filename + "\n";
+        cout << "Local copy of the state file saved in file: " + filename + " (";
+	cout << size;
+	cout << " bytes)\n";
 
       }
 
