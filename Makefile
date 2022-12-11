@@ -3,7 +3,8 @@ CXX = g++
 CXXFLAGS = -g -Wall -Wextra -std=c++11
 
 .PHONY: all clean run
-
+CXXSOURCES = ./playerApp/*.cpp ./gameServer/*.cpp 
+ 
 all: player server server_udp
 
 # PLAYER
@@ -26,6 +27,9 @@ gameServer/server.o: gameServer/server.cpp
 gameServer/server_udp.o: gameServer/server_udp.cpp
 		g++ $(CXXFLAGS) -o gameServer/server_udp.o -c gameServer/server_udp.cpp
 
+
+clang-format: 
+	@clang-format -i -style=Webkit $(CXXSOURCES) || true
 
 clean: 
 	@echo Cleaning... 
