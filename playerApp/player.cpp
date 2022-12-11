@@ -31,7 +31,7 @@ void flag_decoder(int argc, char* argv[])
     if (argc == 1) {
         return;
     } else if (argc == 3 || argc == 5) {
-        for (int i = 1; i < argc; i+=2) {
+        for (int i = 1; i < argc; i += 2) {
             if (string(argv[i]) == "-n") {
                 GSIP = argv[i + 1];
             } else if (string(argv[i]) == "-p") {
