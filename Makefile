@@ -1,6 +1,6 @@
 # COMPILER, TOOLS AND OPTIONS
 CXX = g++
-CXXFLAGS = -g -Wall -Wextra
+CXXFLAGS = -g -Wall -Wextra -std=c++11
 
 .PHONY: all clean run
 
@@ -10,7 +10,7 @@ all: player server server_udp
 player: playerApp/player.o
 		g++ $(CXXFLAGS) -o player playerApp/player.o
 
-player.o: playerApp/player.cpp
+playerApp/player.o: playerApp/player.cpp
 		g++ $(CXXFLAGS) -o playerApp/player.o -c playerApp/player.cpp
 
 #SERVER
