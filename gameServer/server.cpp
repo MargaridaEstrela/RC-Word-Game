@@ -14,7 +14,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-
 using namespace std;
 
 // GLOBAL VARIABLES
@@ -25,52 +24,50 @@ string word;
 pid_t udp_pid;
 pid_t tcp_pid;
 
-
 // FUNCTIONS
-void decoder(int argc, char *argv[]);
+void decoder(int argc, char* argv[]);
 
+void decoder(int argc, char* argv[])
+{
 
-void decoder(int argc, char *argv[]) {
-
-  if (argc == 2) {
-    word = argv[1];
-    return;
-  } else if (argc == 3 || argc == 5) {
-    for (int i = 1; i < argc; i+=2) {
-      if (string(argv[i]) == "-p") {
-        GSPORT = argv[i+1];
-      } else if (string(argv[i]) == "-v") {
-        verbose = true;
-      } else {
-        cerr << "ERROR: unknown flag: " << argv[i] << ". Usage: ./GS word_file [-p GSport] [-v]\n";
+    if (argc == 2) {
+        word = argv[1];
+        return;
+    } else if (argc == 3 || argc == 5) {
+        for (int i = 1; i < argc; i += 2) {
+            if (string(argv[i]) == "-p") {
+                GSPORT = argv[i + 1];
+            } else if (string(argv[i]) == "-v") {
+                verbose = true;
+            } else {
+                cerr << "ERROR: unknown flag: " << argv[i] << ". Usage: ./GS word_file [-p GSport] [-v]\n";
+                exit(EXIT_FAILURE);
+            }
+        }
+    } else {
+        cerr << "ERROR: invalid application start command. Usage: ./GS word_file [-p GSport] [-v]\n";
         exit(EXIT_FAILURE);
-      }
     }
-  } else {
-    cerr << "ERROR: invalid application start command. Usage: ./GS word_file [-p GSport] [-v]\n";
-    exit(EXIT_FAILURE);
-  }
-  return;
+    return;
 }
 
-int main(int argc, char *argv[]) {
-  
-  decoder(argc, argv);
+int main(int argc, char* argv[])
+{
 
-  udp_pid = fork();
+    decoder(argc, argv);
 
-  if (udp_pid == 0) {
-    // TO VERIFY
-    execl("./server_udp", "./server_udp", word.c_str(), GSPORT.c_str(), verbose);
-    cerr << "ERROR: cannot execute UDP server\n";
-    exit(EXIT_FAILURE);
-  } else if (udp_pid == -1) {
-    exit(EXIT_FAILURE);
-  }
+    udp_pid = fork();
 
+    if (udp_pid == 0) {
+        // TO VERIFY
+        execl("./server_udp", "./server_udp", word.c_str(), GSPORT.c_str(), verbose);
+        cerr << "ERROR: cannot execute UDP server\n";
+        exit(EXIT_FAILURE);
+    } else if (udp_pid == -1) {
+        exit(EXIT_FAILURE);
+    }
 
-  //samething for TCP
-  
-  return 0;
+    // samething for TCP
 
+    return 0;
 }
