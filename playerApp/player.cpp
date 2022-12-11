@@ -5,6 +5,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <iostream>
+#include <fstream>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <sstream>
@@ -46,6 +47,106 @@ void flag_decoder(int argc, char *argv[]) {
     exit(EXIT_FAILURE);
   }
   return;
+}
+
+void TCP_read_to_file(int fd,string filename,int byte_size,string prefix){
+  
+  char buffer[MAX_COMMAND_LINE+10000];
+  ssize_t n;
+
+  ofstream file(filename);
+  cout << "1\n";
+  file << prefix; 
+
+  cout << "2\n";
+  string response;
+  while(byte_size > 0){
+    response = "";
+    n = read(fd,buffer,MAX_COMMAND_LINE+10000);
+    if (n == -1) {
+      cerr << "AQUI ";
+      cerr << errno;
+      exit(1);
+    }
+    if (n == 0) {
+      break;
+    }
+    byte_size = byte_size - n;
+
+    for (int i = 0; i < n; i++) {
+      response += buffer[i];
+    }
+    file << response;
+    
+  }
+  
+  cout << "?";
+  //file << response;
+  close(fd);
+  file.close();
+  return;
+
+}
+
+string TCP_send_receive(string message) {
+  int fd, errcode;
+  ssize_t n;
+  socklen_t addrlen;
+  struct addrinfo hints, *res;
+  struct sockaddr_in addr;
+  char buffer[MAX_COMMAND_LINE];
+
+  fd = socket(AF_INET, SOCK_STREAM, 0);
+
+  if (fd == -1) {
+    exit(1);
+  }
+
+  memset(&hints,0,sizeof hints);
+  hints.ai_family = AF_INET;
+  hints.ai_socktype = SOCK_STREAM;
+
+  errcode = getaddrinfo(GSIP.c_str(), GSPORT.c_str(), &hints, &res);
+  if(errcode != 0) {
+    exit(1);
+  }
+
+  n = connect(fd,res->ai_addr,res->ai_addrlen);
+  if (n == -1){ 
+    exit(1);
+  }
+
+  int n_left = message.size();
+  n = write(fd,message.c_str(),message.size());
+  while (n_left>0){
+    n = write(fd,message.c_str(),message.size());
+    if (n == -1) {
+      exit(1);
+    }
+    n_left = n_left - n;
+  }
+
+  string response = "";
+  int n_status_read = 45; //tamanho maximo da resposta (sem a parte dos dados)
+  while(n_status_read > 0){
+    n = read(fd,buffer,n_status_read);
+    if (n == -1) {
+      exit(1);
+    }
+    if (n == 0) {
+      break;
+    }
+    n_status_read = n_status_read - n;
+
+    for (int i = 0; i < n; i++) {
+      response += buffer[i];
+    }
+    
+  }
+
+  //freeaddrinfo(res);
+
+  return to_string(fd) + " " + response;
 }
 
 
@@ -321,21 +422,81 @@ int main(int argc, char *argv[]) {
         cerr << "ERROR: The 'guess' command was rejected by the server. Check if there is an ongoing game with the 'state' command\n";
         continue;
       }
+
     } else if (command == "scoreboard" || command == "sb") {
       if (fields[1] != "") {
         cerr << "ERROR: Argument not required in this command\n";
         continue;
+      }
+      string response = TCP_send_receive("GSB\n");
+      cout << response;
+      stringstream rr(response);
+      int fd;
+      string code;
+      rr >> fd;
+      rr >> code;
+      if (code != "RSB") {
+        cerr << "ERROR: Wrong Protocol Message Received. Terminating connection\n";
+	close(fd);
+        exit(EXIT_FAILURE);
+      }
+      string status;
+      rr >> status;
+      if (status == "EMPTY"){
+	cout << "No games has yet been won on this server\n";
+	close (fd);
+      }
+      else if (status == "OK"){
+	string filename;
+	int size;
+	string prefix;
+	rr >> filename;
+	rr >> size;
+	rr >> prefix;
+        TCP_read_to_file(fd,filename,size,prefix);
       }
     } else if (command == "hint" || command == "h") {
       if (fields[1] != "") {
         cerr << "ERROR: Argument not required in this command\n";
         continue;
       }
+      string response = TCP_send_receive("GHL " + PLID + "\n");
+      cout << response;
+      stringstream rr(response);
+      int fd;
+      string code;
+      rr >> fd;
+      rr >> code;
+      if (code != "RHL") {
+        cerr << "ERROR: Wrong Protocol Message Received. Terminating connection\n";
+	close(fd);
+        exit(EXIT_FAILURE);
+      }
+      string status;
+      rr >> status;
+      if (status == "NOK"){
+	cout << "The server could not respond to the request. Try again later\n";
+	close (fd);
+      }
+      else if (status == "OK"){
+	string filename;
+	int size;
+	string prefix;
+	rr >> filename;
+	rr >> size;
+	rr >> prefix;
+        TCP_read_to_file(fd,filename,size-45,prefix);
+      }
+
+
     } else if (command == "state" || command == "st") {
       if (fields[1] != "") {
         cerr << "ERROR: Argument not required in this command\n";
         continue;
       }
+      string response = TCP_send_receive("STA " + PLID +"\n");
+      cout << response;
+
     } else if (command == "quit") {
       if (fields[1] != "") {
         cerr << "ERROR: Argument not required in this command\n";

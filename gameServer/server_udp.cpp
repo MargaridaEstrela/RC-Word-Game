@@ -35,6 +35,13 @@ int trials = 0; // not to be here
 char *guess;
 
 
+// FUNCTIONS
+void setup(void);
+int max_errors(int word_size);
+void process(void);
+void end_UDP_session(void);
+
+
 void setup_udp(void){
 
   int errcode;
@@ -76,7 +83,7 @@ int max_errors(int word_size) {
 }
 
 
-void process(){
+void process(void){
 
   char request[MAX_COMMAND_LINE];
   string response;
@@ -133,7 +140,7 @@ void process(){
       int n = 0;
       char letter = arg3[0];
       
-      for (int i = 0; i < word.length(); i++) {
+      for (int i = 0; i < (int) word.length(); i++) {
         if (letter == word[i]) { // não gosto disto assim mas por agora deve funcionar
           n ++;
         }

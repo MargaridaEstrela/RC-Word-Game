@@ -27,13 +27,16 @@ pid_t tcp_pid;
 
 
 // FUNCTIONS
+void decoder(int argc, char *argv[]);
+
+
 void decoder(int argc, char *argv[]) {
 
   if (argc == 2) {
     word = argv[1];
     return;
   } else if (argc == 3 || argc == 5) {
-    for (int i = 1; i < argc; i++) {
+    for (int i = 1; i < argc; i+=2) {
       if (string(argv[i]) == "-p") {
         GSPORT = argv[i+1];
       } else if (string(argv[i]) == "-v") {
@@ -42,7 +45,6 @@ void decoder(int argc, char *argv[]) {
         cerr << "ERROR: unknown flag: " << argv[i] << ". Usage: ./GS word_file [-p GSport] [-v]\n";
         exit(EXIT_FAILURE);
       }
-      i++;
     }
   } else {
     cerr << "ERROR: invalid application start command. Usage: ./GS word_file [-p GSport] [-v]\n";
