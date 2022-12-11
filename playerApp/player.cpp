@@ -51,7 +51,7 @@ void flag_decoder(int argc, char *argv[]) {
 
 void TCP_read_to_file(int fd,string filename,int byte_size,string prefix){
   
-  char buffer[MAX_COMMAND_LINE+10000];
+  char buffer[MAX_COMMAND_LINE];
   ssize_t n;
 
   ofstream file(filename);
@@ -62,9 +62,10 @@ void TCP_read_to_file(int fd,string filename,int byte_size,string prefix){
   string response;
   while(byte_size > 0){
     response = "";
-    n = read(fd,buffer,MAX_COMMAND_LINE+10000);
+    n = read(fd,buffer,MAX_COMMAND_LINE);
     if (n == -1) {
       cerr << "AQUI ";
+      cerr << byte_size;
       cerr << errno;
       exit(1);
     }
@@ -80,8 +81,7 @@ void TCP_read_to_file(int fd,string filename,int byte_size,string prefix){
     
   }
   
-  cout << "?";
-  //file << response;
+  file << response;
   close(fd);
   file.close();
   return;
@@ -144,7 +144,7 @@ string TCP_send_receive(string message) {
     
   }
 
-  //freeaddrinfo(res);
+  freeaddrinfo(res);
 
   return to_string(fd) + " " + response;
 }
@@ -443,7 +443,7 @@ int main(int argc, char *argv[]) {
       string status;
       rr >> status;
       if (status == "EMPTY"){
-	cout << "No games has yet been won on this server\n";
+	cout << "No games have yet been won on this server\n";
 	close (fd);
       }
       else if (status == "OK"){
@@ -454,6 +454,14 @@ int main(int argc, char *argv[]) {
 	rr >> size;
 	rr >> prefix;
         TCP_read_to_file(fd,filename,size,prefix);
+        ifstream file(filename);
+	if( file.is_open()){
+	  cout << file.rdbuf();
+	}
+       
+        file.close();	
+        cout << "Local copy of the scoreboard saved in file: " + filename + "\n";
+
       }
     } else if (command == "hint" || command == "h") {
       if (fields[1] != "") {
@@ -486,8 +494,10 @@ int main(int argc, char *argv[]) {
 	rr >> size;
 	rr >> prefix;
         TCP_read_to_file(fd,filename,size-45,prefix);
+	cout << "Received hint file: " + filename + " (";
+	cout << size;
+	cout << " bytes)\n";
       }
-
 
     } else if (command == "state" || command == "st") {
       if (fields[1] != "") {
@@ -496,6 +506,47 @@ int main(int argc, char *argv[]) {
       }
       string response = TCP_send_receive("STA " + PLID +"\n");
       cout << response;
+
+      stringstream rr(response);
+      int fd;
+      string code;
+      rr >> fd;
+      rr >> code;
+      if (code != "RST") {
+        cerr << "ERROR: Wrong Protocol Message Received. Terminating connection\n";
+	close(fd);
+        exit(EXIT_FAILURE);
+      }
+      string status;
+      rr >> status;
+      if (status == "NOK"){
+	cout << "No games have been played by this player (PLID = " + PLID + ")\n";
+	close (fd);
+      }
+      else{
+	string filename;
+	int size;
+	string prefix;
+	rr >> filename;
+	rr >> size;
+	rr >> prefix;
+	if (status == "ACT"){
+	  cout << "There is currently an ongoing game. Its summary is shown below:\n";
+	}
+	else if (status == "FIN"){
+          cout << "No ongoing games at the moment. The summary for the last finished game is shown below:\n";
+	}
+        TCP_read_to_file(fd,filename,size,prefix);
+        ifstream file(filename);
+	if( file.is_open()){
+	  cout << file.rdbuf();
+	}
+       
+        file.close();	
+        cout << "Local copy of the state file saved in file: " + filename + "\n";
+
+      }
+
 
     } else if (command == "quit") {
       if (fields[1] != "") {
