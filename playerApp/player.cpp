@@ -69,8 +69,6 @@ int TCP_read_to_file(int fd, string filename, int byte_size, string prefix)
     while (byte_size > 0) {
         n = read(fd, buffer, 1024);
         if (n == -1) {
-            cerr << "AQUI ";
-            cerr << byte_size;
 	    close(fd);
             return -1; 
         }
@@ -690,7 +688,7 @@ int main(int argc, char* argv[])
 		if (i == -1){
 		  cerr << "ERROR: System call for TCP message or reception during file transfer has failed. Terminating connection...\n";
 		  disconnect();
-		  cout << "Closing game app...";
+		  cout << "Closing game app...\n";
 		  exit(EXIT_FAILURE);
 		}
                 cout << "Received hint file: " + filename + " (";
