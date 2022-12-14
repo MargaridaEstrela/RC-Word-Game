@@ -106,8 +106,7 @@ char* create_user_game_dir(char* user_dir, char* PLID)
     return user_game_dir;
 }
 
-
-char* get_last_guess_letter(char *PLID) 
+char* get_last_guess_letter(char* PLID)
 {
     std::ifstream game;
     char *user_dir, *game_user_dir;
@@ -131,7 +130,7 @@ char* get_last_guess_letter(char *PLID)
 
             std::stringstream stream_line(line);
             stream_line >> code;
-            
+
             if (!strcmp(code, "T")) {
                 stream_line >> letter;
             }
@@ -141,7 +140,7 @@ char* get_last_guess_letter(char *PLID)
     return letter;
 }
 
-char *get_last_guess_word(char *PLID) 
+char* get_last_guess_word(char* PLID)
 {
     std::ifstream game;
     char *user_dir, *game_user_dir;
@@ -165,7 +164,7 @@ char *get_last_guess_word(char *PLID)
 
             std::stringstream stream_line(line);
             stream_line >> code;
-            
+
             if (!strcmp(code, "G")) {
                 stream_line >> word;
             }
@@ -174,7 +173,7 @@ char *get_last_guess_word(char *PLID)
     return word;
 }
 
-int get_trials(char *PLID) 
+int get_trials(char* PLID)
 {
     std::ifstream game;
     char *user_dir, *game_user_dir;
@@ -189,9 +188,8 @@ int get_trials(char *PLID)
 
         while (game) {
             std::getline(game, line);
-            count ++;
+            count++;
         }
     }
     return count - 1;
-
 }

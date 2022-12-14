@@ -30,15 +30,16 @@ struct addrinfo hints, *res;
 struct sockaddr_in addr;
 socklen_t addrlen;
 
-string word;
+char* word;
 int word_size;
 int errors;
-string PLID;
-string GSPORT = "58034";
+char* PLID;
+char* GSPORT = "58034";
 bool verbose;
-int trials;
-char last_guess_letter;
-string last_guess_word;
+int trials = 0;
+int status;
+char* last_guess_letter;
+char* last_guess_word;
 
 // FUNCTIONS
 void setup(void);
@@ -63,7 +64,7 @@ void setup_udp(void)
     hints.ai_socktype = SOCK_DGRAM; // UDP SOCKET
     hints.ai_flags = AI_PASSIVE;
 
-    errcode = getaddrinfo(NULL, GSPORT.c_str(), &hints, &res);
+    errcode = getaddrinfo(NULL, GSPORT, &hints, &res);
 
     if (errcode != 0)
         exit(1);
@@ -77,18 +78,17 @@ void setup_udp(void)
     return;
 }
 
-int check_letter(char letter)
+int check_letter(char* letter)
 {
     int n = 0;
+    char* last_guess_letter = get_last_guess_letter(PLID);
 
-    if (letter == last_guess_letter) {
+    if (!strcmp(letter, last_guess_letter)) {
         return STATUS_DUP;
     }
 
-    trials++;
-
     for (int i = 0; i < word_size; i++) {
-        if (letter == word[i])
+        if (*letter == word[i])
             n++;
     }
 
@@ -103,16 +103,29 @@ int check_letter(char letter)
     return STATUS_OK;
 }
 
+int check_word(char* guess_word)
+{
+    char* last_guess_word = get_last_guess_word(PLID);
+
+    if (!strcmp(guess_word, last_guess_letter)) {
+        return STATUS_WIN;
+    } else if (get_trials(PLID) < errors) {
+        return STATUS_NOK;
+    } else {
+        return STATUS_OVR;
+    }
+}
+
 void process(void)
 {
-
     char request[MAX_COMMAND_LINE];
     string response;
 
     while (1) {
 
         addrlen = sizeof(addr);
-        n = recvfrom(fd, request, MAX_COMMAND_LINE, 0, (struct sockaddr*)&addr, &addrlen);
+        n = recvfrom(fd, request, MAX_COMMAND_LINE, 0, (struct sockaddr*)&addr,
+            &addrlen);
 
         printf("message received\n");
 
@@ -136,31 +149,27 @@ void process(void)
         if (!strcmp(arg1, "SNG")) {
 
             if (strlen(arg2) != 6) {
-                std::cerr << "PLID: bad format. PLID is always sent using 6 digits." << std::endl;
+                std::cerr << "PLID: bad format. PLID is always sent using 6 digits."
+                          << std::endl;
                 exit(EXIT_FAILURE);
             }
 
             PLID = arg2;
 
-            int status = 0; // to be changed
-
-            // status will be the output from register_user
-            // we'll have a file just for register, unregister, etc.
-
-            // check if PLID has any ongoing game (whit play moves)
+            int status = register_user(arg2);
 
             switch (status) {
             case STATUS_OK:
                 response = "RSG OK " + std::to_string(word_size) + " " + std::to_string(errors) + "\n";
                 break;
             case STATUS_NOK:
+                trials = get_trials(PLID);
                 response = "RSG NOK\n";
-                // checks if player PLID has any ongoing game (with play moves)
                 break;
             }
         } else if (!strcmp(arg1, "PLG")) {
 
-            if (PLID.length() == 0) {
+            if (sizeof(PLID) == 0) {
                 response = "RLG ERR\n";
             }
 
@@ -168,12 +177,12 @@ void process(void)
                 response = "RLG INV " + (string)arg4 + "\n";
             }
 
-            last_guess_letter = arg3[0];
-            int status = check_letter(last_guess_letter);
+            last_guess_letter = arg3;
+            status = check_letter(last_guess_letter);
 
             switch (status) {
             case STATUS_OK:
-                response = "RLG OK " + std::to_string(last_guess_letter) + " " + std::to_string(n) + "\n";
+                response = "RLG OK " + (string)last_guess_letter + " " + std::to_string(n) + "\n";
                 break;
             case STATUS_WIN:
                 response = "RLG WIN " + (string)arg4 + "\n";
@@ -181,52 +190,86 @@ void process(void)
                 break;
             case STATUS_DUP:
                 response = "RLG DUP\n";
-                // checks if player PLID has any ongoing game (with play moves)
                 break;
             case STATUS_NOK:
                 response = "RLG NOK\n";
-                // checks if player PLID has any ongoing game (with play moves)
                 break;
             case STATUS_OVR:
                 response = "RLG OVR\n";
-                // checks if player PLID has any ongoing game (with play moves)
                 break;
             }
 
         } else if (!strcmp(arg1, "PWG")) {
-            // no idea what to do with PLID
-            // i will check this only just for now
 
-            if (arg2 != PLID) {
-                // need to check if there is any ongoing game for this PLID
+            PLID = arg2;
+
+            char* user_dir = create_user_dir(PLID);
+            char* user_game_dir = create_user_game_dir(user_dir, PLID);
+
+            if (arg2 != PLID || check_ongoing_game(user_game_dir)) {
                 response = "RWG ERR\n";
-            }
+            } 
 
-            if (atoi(arg4) != trials || !strcmp(arg3, last_guess_word.c_str())) {
+            trials = get_trials(PLID);
+            last_guess_word = get_last_guess_word(PLID);
+
+            if (atoi(arg4) != trials || !strcmp(arg3, last_guess_word)) {
                 response = "RWG INV " + std::to_string(trials) + "\n";
             }
 
-            if (!strcmp(arg2, word.c_str())) {
-                response = "RWG WIN\n";
-            } else {
-                if (trials < errors) {
-                    response = "RWG NOK\n";
-                } else {
-                    response = "RWG OVR\n";
-                }
+            status = check_word(arg3);
+
+            switch (status) {
+                case STATUS_WIN:
+                    response = "RWG WIN " + std::to_string(trials) + "\n";
+                    break;
+                case STATUS_NOK:
+                    response = "RWG WIN " + std::to_string(trials) + "\n";
+                    break;
+                case STATUS_OVR:
+                    response = "RWG OVR " + std::to_string(trials) + "\n";
+                    break;
             }
 
         } else if (!strcmp(arg1, "QUT")) {
 
+            PLID = arg2;
+
+            char* user_dir = create_user_dir(PLID);
+            char* user_game_dir = create_user_game_dir(user_dir, PLID);
+
+            if (check_ongoing_game(user_game_dir)) {
+
+                // close tcp connection with player
+                //
+                // if error closing
+                    // response = "RQT ERR\n";
+                // else
+                    //  response = "RQT OK\n";
+            } 
         } else if (!strcmp(arg1, "REV")) {
 
+            PLID = arg2;
+
+            char* user_dir = create_user_dir(PLID);
+            char* user_game_dir = create_user_game_dir(user_dir, PLID);
+
+            if (check_ongoing_game(user_game_dir)) {
+                // close tcp connection with player
+                //
+                // if error closing
+                    // response = "RRV " + (string)word + "/" + "ERR\n";
+                // else
+                    //  response = "RRV " + (string)word + "/" + "OK\n";
+            }
         } else {
             std::cerr << "ERROR_UDP: invalid command." << std::endl;
             exit(EXIT_FAILURE);
         }
 
         // SEND RESPONSE
-        n = sendto(fd, response.c_str(), strlen(response.c_str()) * sizeof(char), 0, (struct sockaddr*)&addr, addrlen);
+        n = sendto(fd, response.c_str(), strlen(response.c_str()) * sizeof(char), 0,
+            (struct sockaddr*)&addr, addrlen);
         if (n < 0) {
             perror("sendto failed");
             exit(EXIT_FAILURE);
@@ -249,8 +292,12 @@ int main(int argc, char* argv[])
         std::cerr << "ERROR_UDP: bad input" << std::endl;
     }
 
+    word = new char[sizeof(argv[1])];
+    PLID = new char[PLID_SIZE];
+
     word = argv[1];
-    word_size = word.length();
+    word_size = sizeof(argv[1]);
+
     errors = max_errors(word_size);
     GSPORT = argv[2];
     verbose = argv[3];

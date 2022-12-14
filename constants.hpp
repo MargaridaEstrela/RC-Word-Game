@@ -1,10 +1,11 @@
-#ifndef CONSTANTS_H
-#define CONSTANTS_H
+#ifndef CONSTANTS
+#define CONSTANTS
 
 // SIZES
 #define MAX_COMMAND_LINE 128
 #define MAX_TCP_RESPONSE 45
 #define MAX_TCP_READ 1024
+#define PLID_SIZE 6
 
 // STATUS CODES
 #define STATUS_OK 2
@@ -18,7 +19,7 @@
 #define STATUS_ACT 10
 #define STATUS_FIN 11
 
-//TIMER
+// TIMER
 #define TIME_LIMIT 5
 
 // ERROR STRINGS
@@ -27,4 +28,4 @@
 #define ERR_ERR "ERR"
 #define ERR_LOST "LOST"
 
-#endif // ONSTANTS_H
+#endif // !CONSTANTS
