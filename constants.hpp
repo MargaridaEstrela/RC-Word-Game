@@ -13,4 +13,4 @@
 #define STATUS_INV 7
 #define STATUS_ERR 8
 
-#endif //ONSTANTS_H
+#endif // ONSTANTS_H
