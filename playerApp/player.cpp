@@ -544,7 +544,7 @@ void guess_command(string guess){
     rr >> word;
     int status = translate_status(word);
     switch (status) {
-        case STATUS_OK: {
+        case STATUS_WIN: {
             cout << "WELL DONE! You guessed: " + guess + "\n";
             n_trials = -1;
             delete[] guessed;
@@ -597,50 +597,169 @@ void scoreboard_command(){
 
     string word;
     rr >> word;
-    int status = translate_status(status);
+    int status = translate_status(word);
+    switch (status) {
+        case STATUS_OK: {
+            string filename;
+            int size;
+            string prefix;
+            rr >> filename;
+            rr >> size;
+            rr >> prefix;
+            int i = TCP_read_to_file(fd, filename, size - MAX_TCP_RESPONSE, prefix);
+            if (i == -1) {
+                cerr << "ERROR: A System call for TCP message or reception during file transfer has failed. Terminating connection...\n";
+                disconnect();
+                cout << "Closing game app...\n";
+                exit(EXIT_FAILURE);
+            }
 
-    if (status == "EMPTY") {
-        cout << "No games have yet been won on this server\n";
-        close(fd);
+            ifstream file(filename);
+            if (file.is_open()) {
+                cout << file.rdbuf();
+            }
 
-    } else if (status == "OK") {
-        string filename;
-        int size;
-        string prefix;
-        rr >> filename;
-        rr >> size;
-        rr >> prefix;
-        int i = TCP_read_to_file(fd, filename, size - 45, prefix);
-        if (i == -1) {
-            cerr << "ERROR: A System call for TCP message or reception during file transfer has failed. Terminating connection...\n";
+            file.close();
+            cout << "Local copy of the scoreboard saved in file: " + filename + "\n";
+            break;
+        }
+        case STATUS_EMPTY: {
+            cout << "No games have yet been won on this server\n";
+            close(fd);
+            break;
+        }
+        default: {
+            cerr << "ERROR: Wrong Protocol Message Received. Terminating connection...\n";
+            close(fd);
             disconnect();
             cout << "Closing game app...\n";
             exit(EXIT_FAILURE);
+            break;
         }
-
-        ifstream file(filename);
-        if (file.is_open()) {
-            cout << file.rdbuf();
-        }
-
-        file.close();
-        cout << "Local copy of the scoreboard saved in file: " + filename + "\n";
-    } else {
-        cerr << "ERROR: Wrong Protocol Message Received. Terminating connection...\n";
-        close(fd);
-        disconnect();
-        cout << "Closing game app...\n";
-        exit(EXIT_FAILURE);
     }
-
-
-
+    return;
 
 }
 
+void hint_command(){
+
+    string response = TCP_send_receive("GHL " + PLID + "\n");
+    stringstream rr(response);
+    int fd;
+    string code;
+    rr >> fd;
+    rr >> code;
+
+    int err = error_check(code,"RHL");
+    if (err == -1){
+        return;
+    }
+
+    string word;
+    rr >> word;
+    int status = translate_status(word);
+    switch (status) {
+        case STATUS_OK: {
+            string filename;
+            int size;
+            string prefix;
+            rr >> filename;
+            rr >> size;
+            rr >> prefix;
+            int i = TCP_read_to_file(fd, filename, size - MAX_TCP_RESPONSE, prefix);
+            if (i == -1) {
+                cerr << "ERROR: System call for TCP message or reception during file transfer has failed. Terminating connection...\n";
+                disconnect();
+                cout << "Closing game app...\n";
+                exit(EXIT_FAILURE);
+            }
+            cout << "Received hint file: " + filename + " (";
+            cout << size;
+            cout << " bytes)\n";
+            break;
+        }
+        case STATUS_NOK: {
+            cout << "The server could not respond to the request. Try again later\n";
+            close(fd);
+            break;
+        }
+        default: {
+            cerr << "ERROR: Wrong Protocol Message Received. Terminating connection...\n";
+            close(fd);
+            disconnect();
+            cout << "Closing game app...\n";
+            exit(EXIT_FAILURE);
+            break;
+        }
+    }
+    return;
+
+}
+
+void state_command(){
+
+    string response = TCP_send_receive("STA " + PLID + "\n");
+    stringstream rr(response);
+    int fd;
+    string code;
+    rr >> fd;
+    rr >> code;
+
+    int err = error_check(code,"RST");
+
+    string word;
+    rr >> word;
+    int status = translate_status(word);
+    switch (status) {
+        case STATUS_ACT:
+        case STATUS_FIN: {
+            string filename;
+            int size;
+            string prefix = "";
+            string word;
+            rr >> filename;
+            rr >> size;
+            while (rr >> word) {
+                prefix = prefix + word + " ";
+            }
+            prefix.pop_back();
+            int i = TCP_read_to_file(fd, filename, size - MAX_TCP_RESPONSE, prefix);
+            if (i == -1) {
+                cerr << "ERROR: System call for TCP message or reception during file transfer has failed. Terminating connection...\n";
+                disconnect();
+                cout << "Closing game app...\n";
+                exit(EXIT_FAILURE);
+            }
+            ifstream file(filename);
+            if (file.is_open()) {
+                cout << file.rdbuf();
+            }
+
+            file.close();
+            cout << "Local copy of the state file saved in file: " + filename + " (";
+            cout << size;
+            cout << " bytes)\n";
+            break;
+        }
+        case STATUS_NOK: {
+            cout << "No games have been played by this player (PLID = " + PLID + ")\n";
+            close(fd);
+            break;
+        }
+        default: {
+            cerr << "ERROR: Wrong Protocol Message Received. Terminating connection...\n";
+            close(fd);
+            disconnect();
+            cout << "Closing game app...\n";
+            exit(EXIT_FAILURE);
+            break;
+        }
+    }   
+ 
+    return;
 
 
-
+}
 
 
 int main(int argc, char* argv[])
@@ -705,64 +824,7 @@ int main(int argc, char* argv[])
                 cerr << "ERROR: Argument not required in this command\n";
                 continue;
             }
-            string response = TCP_send_receive("GHL " + PLID + "\n");
-            stringstream rr(response);
-            int fd;
-            string code;
-            rr >> fd;
-            rr >> code;
-
-            if (code == "TCP") {
-                cerr << "ERROR: System call for TCP message or reception has failed. Terminating connection...\n";
-                disconnect();
-                cout << "Closing game app...\n";
-                exit(EXIT_FAILURE);
-            }
-
-            else if (code == "ERR") {
-                cerr << "ERROR: Unexpected protocol message received by server. Terminating connection...\n";
-                close(fd);
-                disconnect();
-                cout << "Closing game app...\n";
-                exit(EXIT_FAILURE);
-            }
-
-            else if (code != "RHL") {
-                cerr << "ERROR: Wrong Protocol Message Received. Terminating connection\n";
-                close(fd);
-                disconnect();
-                cout << "Closing game app...\n";
-                exit(EXIT_FAILURE);
-            }
-            string status;
-            rr >> status;
-            if (status == "NOK") {
-                cout << "The server could not respond to the request. Try again later\n";
-                close(fd);
-            } else if (status == "OK") {
-                string filename;
-                int size;
-                string prefix;
-                rr >> filename;
-                rr >> size;
-                rr >> prefix;
-                int i = TCP_read_to_file(fd, filename, size - 45, prefix);
-                if (i == -1) {
-                    cerr << "ERROR: System call for TCP message or reception during file transfer has failed. Terminating connection...\n";
-                    disconnect();
-                    cout << "Closing game app...\n";
-                    exit(EXIT_FAILURE);
-                }
-                cout << "Received hint file: " + filename + " (";
-                cout << size;
-                cout << " bytes)\n";
-            } else {
-                cerr << "ERROR: Wrong Protocol Message Received. Terminating connection...\n";
-                close(fd);
-                disconnect();
-                cout << "Closing game app...\n";
-                exit(EXIT_FAILURE);
-            }
+            hint_command();
 
         } else if (command == "state" || command == "st") {
 
@@ -774,68 +836,8 @@ int main(int argc, char* argv[])
                 cerr << "ERROR: Argument not required in this command\n";
                 continue;
             }
-            string response = TCP_send_receive("STA " + PLID + "\n");
+            state_command();
 
-            stringstream rr(response);
-            int fd;
-            string code;
-            rr >> fd;
-            rr >> code;
-            if (code == "TCP") {
-                cerr << "ERROR: System call for TCP message or reception has failed. Terminating connection...\n";
-                disconnect();
-                cout << "Closing game app...\n";
-                exit(EXIT_FAILURE);
-            }
-
-            else if (code == "ERR") {
-                cerr << "ERROR: Unexpected protocol message received by server. Terminating connection...\n";
-                close(fd);
-                disconnect();
-                cout << "Closing game app...\n";
-                exit(EXIT_FAILURE);
-            }
-
-            else if (code != "RST") {
-                cerr << "ERROR: Wrong Protocol Message Received. Terminating connection...\n";
-                close(fd);
-                disconnect();
-                cout << "Closing game app...\n";
-                exit(EXIT_FAILURE);
-            }
-            string status;
-            rr >> status;
-            if (status == "NOK") {
-                cout << "No games have been played by this player (PLID = " + PLID + ")\n";
-                close(fd);
-            } else if (status == "ACT" || status == "FIN") {
-                string filename;
-                int size;
-                string prefix = "";
-                string word;
-                rr >> filename;
-                rr >> size;
-                while (rr >> word) {
-                    prefix = prefix + word + " ";
-                }
-                prefix.pop_back();
-                int i = TCP_read_to_file(fd, filename, size - 45, prefix);
-                if (i == -1) {
-                    cerr << "ERROR: System call for TCP message or reception during file transfer has failed. Terminating connection...\n";
-                    disconnect();
-                    cout << "Closing game app...\n";
-                    exit(EXIT_FAILURE);
-                }
-                ifstream file(filename);
-                if (file.is_open()) {
-                    cout << file.rdbuf();
-                }
-
-                file.close();
-                cout << "Local copy of the state file saved in file: " + filename + " (";
-                cout << size;
-                cout << " bytes)\n";
-            }
 
         } else if (command == "quit") {
             if (fields[1] != "") {
