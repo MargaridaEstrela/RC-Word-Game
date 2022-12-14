@@ -15,3 +15,14 @@ bool check_PLID(char* PLID)
 
     return true;
 }
+
+int max_errors(int word_size)
+{
+    if (word_size <= 6) {
+        return 7;
+    } else if (word_size > 6 & word_size <= 10) {
+        return 8;
+    } else {
+        return 9;
+    }
+}

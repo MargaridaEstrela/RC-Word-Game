@@ -1,3 +1,4 @@
+#include "../aux_functions.hpp"
 #include "../constants.hpp"
 #include "data.hpp"
 
@@ -74,17 +75,6 @@ void setup_udp(void)
     }
 
     return;
-}
-
-int max_errors(int word_size)
-{
-    if (word_size <= 6) {
-        return 7;
-    } else if (word_size > 6 & word_size <= 10) {
-        return 8;
-    } else {
-        return 9;
-    }
 }
 
 int check_letter(char letter)

@@ -13,5 +13,6 @@
 #include <unistd.h>
 
 bool check_PLID(char* PLID);
+int max_errors(int word_size);
 
 #endif

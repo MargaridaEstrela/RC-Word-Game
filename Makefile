@@ -20,7 +20,7 @@ playerApp/player.o: playerApp/player.cpp
 server: gameServer/server.o 
 		g++ $(CXXFLAGS) -o server gameServer/server.o
 
-server_udp: gameServer/server_udp.o gameServer/data.o aux_functions.o
+server_udp: gameServer/server_udp.o aux_functions.o gameServer/data.o 
 		g++ $(CXXFLAGS) -o server_udp gameServer/server_udp.o aux_functions.o gameServer/data.o
 
 gameServer/server.o: gameServer/server.cpp 
@@ -29,7 +29,7 @@ gameServer/server.o: gameServer/server.cpp
 gameServer/server_udp.o: gameServer/server_udp.cpp gameServer/data.hpp aux_functions.hpp
 		g++ $(CXXFLAGS) -o gameServer/server_udp.o -c gameServer/server_udp.cpp
 
-gameServer/data.o: aux_functions.hpp 
+gameServer/data.o: gameServer/data.cpp aux_functions.hpp 
 		g++ $(CXXFLAGS) -o gameServer/data.o -c gameServer/data.cpp
 
 
