@@ -273,6 +273,261 @@ void disconnect()
     }
 }
 
+
+int error_check(string code,string protocol){
+    if (code == "UDP") {
+        cerr << "ERROR: A System call for UDP message or reception has failed. Terminating connection...\n";
+        disconnect();
+        cout << "Closing game app...\n";
+        exit(EXIT_FAILURE);
+    }
+        
+    else if (code == "TCP") {
+        cerr << "ERROR: A System call for TCP message or reception has failed. Terminating connection...\n";
+        disconnect();
+        cout << "Closing game app...\n";
+        exit(EXIT_FAILURE);
+    }
+
+    else if (code == "ERR") {
+        cerr << "ERROR: Unexpected protocol message received by server. Check command syntax and definition\n";
+        return -1;
+    }
+
+    else if (code == "LOST") {
+        return -1; // UDP Message Lost
+    }
+
+    else if (code != protocol) {
+        cerr << "ERROR: Wrong Protocol Message Received. Terminating connection...\n";
+        disconnect();
+        cout << "Closing game app...\n";
+        exit(EXIT_FAILURE);
+    }
+
+    else {
+        return 0;
+    }
+
+}
+
+int translate_status (string state){
+    if (state == "OK") {
+        return STATUS_OK;
+    }
+        
+    else if (state == "WIN") {
+        return STATUS_WIN;
+    }
+
+    else if (state == "DUP") {
+        return STATUS_DUP;
+    }
+
+    else if (state == "NOK") {
+        return STATUS_NOK;
+    }
+
+    else if (state == "OVR") {
+        return STATUS_OVR;
+    }
+
+    else if (state == "INV") {
+        return STATUS_INV;
+    }
+
+    else if (state == "ERR") {
+        return STATUS_ERR;
+    }
+
+    else if (state == "EMPTY") {
+        return STATUS_EMPTY;
+    }
+
+    else if (state == "ACT") {
+        return STATUS_ACT;
+    }
+
+    else if (state == "FIN") {
+        return STATUS_FIN;
+    }
+
+    else {
+        return -1;
+    }  
+
+}
+
+void start_command(string ID){
+
+    if (ID == "") {
+        cerr << "ERROR: No PLID was given\n";
+        return;
+    }
+
+    if (PLID != "" && PLID != ID) {
+        cout << "Given PLID (" + ID + ") is different from the last PLID used (" + PLID + "). Disconnecting old player...\n";
+        disconnect();
+    }
+
+    string request = "SNG " + ID + "\n";
+    string response = UDP_send_receive(request);
+    stringstream rr(response);
+    rr >> word;
+
+    int err = error_check(word,"RSG");
+    if (err == -1){
+        return;
+    }
+
+    rr >> word;
+    string output;
+    int status = translate_status(word);
+
+    switch (status) {
+        case STATUS_OK:
+            PLID = ID;
+            string n_misses;
+            rr >> n_letters;
+            rr >> n_misses;
+            n_trials = 0;
+            output = "New game started (max " + n_misses + " errors): ";
+            guessed = new char[n_letters];
+
+            for (int c = 0; c < n_letters; c++) {
+                output += "_ ";
+                guessed[c] = '_';
+            }
+            break;
+        case STATUS_NOK:
+            output = "Game still in progress. Use command 'quit' to end current game";
+            break;
+        default:
+            cerr << "ERROR: Wrong Protocol Message Received. Terminating connection...\n";
+            disconnect();
+            cout << "Closing game app...\n";
+            exit(EXIT_FAILURE);
+            break;
+    }
+
+    cout << output + "\n";
+
+}
+
+void play_command(string letter){
+
+    if (letter == "") {
+        cerr << "ERROR: No letter was given\n";
+        continue;
+    } else if ((int)letter.size() > 1 || isalpha(letter[0]) == 0) {
+        cerr << "ERROR: Input given is not a letter\n";
+        continue;
+    }
+
+    n_trials++;
+
+    transform(fields[1].begin(), fields[1].end(), fields[1].begin(), ::toupper);
+
+    string request = "PLG " + PLID + " " + fields[1] + " " + to_string(n_trials) + "\n";
+    string response = UDP_send_receive(request);
+
+    stringstream rr(response);
+    rr >> word;
+
+    int i = error_check(word,"RLG");
+    if (i == -1){
+        return;
+    }
+
+    rr >> word;
+    int status = translate_status(word);
+    switch(status){
+
+        case STATUS_OK:
+            int ocorr;
+            rr >> word;
+            rr >> ocorr;
+            int pos[ocorr];
+            string output = "";
+
+            for (int j = 0; j < ocorr; j++) {
+                rr >> pos[j];
+            }
+            int k = 0;
+            for (int j = 0; j < n_letters; j++) {
+                if (j == (pos[k] - 1)) {
+                    k++;
+                    guessed[j] = letter.at(0);
+                }
+                output = output + guessed[j] + " ";
+            }
+            cout << "Yes, \"" + letter + "\" is part of the word: " + output + "\n";
+            break;
+
+        case STATUS_WIN:
+            string output = "";
+            for (int j = 0; j < n_letters; j++) {
+                if (guessed[j] == '_') {
+                    guessed[j] = letter.at(0);
+                }
+                output = output + guessed[j];
+            }
+            cout << "WELL DONE! The word was: " + output + "\n";
+            n_trials = -1;
+            delete[] guessed;
+            break;
+
+        case STATUS_DUP:
+            cout << "The letter \"" + letter + "\" has already been played. Try a new one\n";
+            n_trials--;
+            break;
+
+        case STATUS_NOK:
+            cout << "The letter \"" + letter + "\" is not part of the word. Try again\n";
+            break;
+
+        case STATUS_OVR:
+            cout << "GAME OVER! You have reached the max error limit for this word. Play another round?\n";
+            n_trials = -1;
+            delete[] guessed;
+            break;
+
+        case STATUS_INV:
+            cerr << "ERROR: The number of trials is not coherent with the server. If a UDP timeout occured, please repeat the exact command\n";
+            break;
+
+        case STATUS_ERR:
+            n_trials--;
+            cerr << "ERROR: The 'play' command was rejected by the server. Check if there is an ongoing game with the 'state' command\n";
+            break; 
+
+        default:
+            cerr << "ERROR: Wrong Protocol Message Received. Terminating connection...\n";
+            n_trials--;
+            disconnect();
+            cout << "Closing game app...\n";
+            exit(EXIT_FAILURE);
+            break;
+    }
+
+
+}
+
+void guess_command(string guess){
+
+
+
+
+
+
+    
+}
+
+
+
+
+
+
 int main(int argc, char* argv[])
 {
 
@@ -307,186 +562,14 @@ int main(int argc, char* argv[])
         command = fields[0];
 
         if (command == "start" || command == "sg") {
-            if (fields[1] == "") {
-                cerr << "ERROR: No PLID was given\n";
-                continue;
-            }
-
-            if (PLID != "" && PLID != fields[1]) {
-                cout << "Given PLID (" + fields[1] + ") is different from the last PLID used (" + PLID + "). Disconnecting old player...\n";
-                disconnect();
-            }
-
-            string request = "SNG " + fields[1] + "\n";
-            string response = UDP_send_receive(request);
-            stringstream rr(response);
-            rr >> word;
-
-            if (word == "UDP") {
-                cerr << "ERROR: A System call for UDP message or reception has failed. Terminating connection...\n";
-                disconnect();
-                cout << "Closing game app...\n";
-                exit(EXIT_FAILURE);
-            }
-
-            if (word == "ERR") {
-                cerr << "ERROR: Unexpected protocol message received by server. PLID given may be invalid (has to be exactly 6 digits)\n";
-                continue;
-            }
-
-            if (word == "LOST") {
-                continue; // UDP Message Lost
-            }
-
-            else if (word != "RSG") {
-                cerr << "ERROR: Wrong Protocol Message Received. Terminating connection...\n";
-                disconnect();
-                cout << "Closing game app...\n";
-                exit(EXIT_FAILURE);
-            }
-
-            rr >> word;
-            string output;
-
-            if (word == "OK") {
-                PLID = fields[1];
-                string n_misses;
-                rr >> n_letters;
-                rr >> n_misses;
-                n_trials = 0;
-                output = "New game started (max " + n_misses + " errors): ";
-                guessed = new char[n_letters];
-
-                for (int c = 0; c < n_letters; c++) {
-                    output += "_ ";
-                    guessed[c] = '_';
-                }
-            }
-
-            else if (word == "NOK") {
-                output = "Game still in progress. Use command 'quit' to end current game";
-            }
-
-            else {
-                cerr << "ERROR: Wrong Protocol Message Received. Terminating connection...\n";
-                disconnect();
-                cout << "Closing game app...\n";
-                exit(EXIT_FAILURE);
-            }
-
-            cout << output + "\n";
-
-        } else if (command == "play" || command == "pl") {
-
-            if (fields[1] == "") {
-                cerr << "ERROR: No letter was given\n";
-                continue;
-            } else if ((int)fields[1].size() > 1 || isalpha(fields[1][0]) == 0) {
-                cerr << "ERROR: Input given is not a letter\n";
-                continue;
-            }
-
-            n_trials++;
-
-            transform(fields[1].begin(), fields[1].end(), fields[1].begin(), ::toupper);
-
-            string request = "PLG " + PLID + " " + fields[1] + " " + to_string(n_trials) + "\n";
-            string response = UDP_send_receive(request);
-
-            stringstream rr(response);
-            rr >> word;
-
-            if (word == "UDP") {
-                cerr << "ERROR: A System call for UDP message or reception has failed. Terminating connection...\n";
-                n_trials--;
-                disconnect();
-                cout << "Closing game app...\n";
-                exit(EXIT_FAILURE);
-            }
-
-            if (word == "LOST") {
-                n_trials--;
-                continue; // UDP Message Lost
-            }
-
-            else if (word != "RLG") {
-                cerr << "ERROR: Wrong Protocol Message Received. Terminating connection...\n";
-                n_trials--;
-                disconnect();
-                cout << "Closing game app...\n";
-                exit(EXIT_FAILURE);
-            }
-
-            rr >> word;
-            if (word == "OK") {
-                int ocorr;
-                rr >> word;
-                rr >> ocorr;
-                int pos[ocorr];
-                string output = "";
-
-                for (int j = 0; j < ocorr; j++) {
-                    rr >> pos[j];
-                }
-                int k = 0;
-                for (int j = 0; j < n_letters; j++) {
-                    if (j == (pos[k] - 1)) {
-                        k++;
-                        guessed[j] = fields[1].at(0);
-                    }
-                    output = output + guessed[j] + " ";
-                }
-                cout << "Yes, \"" + fields[1] + "\" is part of the word: " + output + "\n";
-            }
-
-            else if (word == "WIN") {
-                string output = "";
-                for (int j = 0; j < n_letters; j++) {
-                    if (guessed[j] == '_') {
-                        guessed[j] = fields[1].at(0);
-                    }
-                    output = output + guessed[j];
-                }
-                cout << "WELL DONE! The word was: " + output + "\n";
-                n_trials = -1;
-                delete[] guessed;
-            }
-
-            else if (word == "DUP") {
-                cout << "The letter \"" + fields[1] + "\" has already been played. Try a new one\n";
-                n_trials--;
-            }
-
-            else if (word == "NOK") {
-                cout << "The letter \"" + fields[1] + "\" is not part of the word. Try again\n";
-            }
-
-            else if (word == "OVR") {
-                cout << "GAME OVER! You have reached the max error limit for this word. Play another round?\n";
-                n_trials = -1;
-                delete[] guessed;
-            }
-
-            else if (word == "INV") {
-                cerr << "ERROR: The number of trials is not coherent with the server. If a UDP timeout occured, please repeat the exact command\n";
-                continue;
-            }
-
-            else if (word == "ERR") {
-                n_trials--;
-                cerr << "ERROR: The 'play' command was rejected by the server. Check if there is an ongoing game with the 'state' command\n";
-                continue;
-            }
-
-            else {
-                cerr << "ERROR: Wrong Protocol Message Received. Terminating connection...\n";
-                n_trials--;
-                disconnect();
-                cout << "Closing game app...\n";
-                exit(EXIT_FAILURE);
-            }
-
-        } else if (command == "guess" || command == "gw") {
+            start_command(fields[1]);
+        } 
+        
+        else if (command == "play" || command == "pl") {
+            play_command(fields[1]);
+        } 
+        
+        else if (command == "guess" || command == "gw") {
 
             if (fields[1] == "") {
                 cerr << "ERROR: No guess word was given\n";

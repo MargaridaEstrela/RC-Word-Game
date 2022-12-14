@@ -12,5 +12,8 @@
 #define STATUS_OVR 6
 #define STATUS_INV 7
 #define STATUS_ERR 8
+#define STATUS_EMPTY 9
+#define STATUS_ACT 10
+#define STATUS_FIN 11
 
 #endif // ONSTANTS_H
