@@ -234,19 +234,19 @@ void process(void)
         } else if (!strcmp(arg1, "QUT")) {
 
             PLID = arg2;
-
             char* user_dir = create_user_dir(PLID);
+
+            if (!user_exists(user_dir)) {
+                response = "RQT ERR\n";
+            }
+
             char* user_game_dir = create_user_game_dir(user_dir, PLID);
 
             if (check_ongoing_game(user_game_dir)) {
-
-                // close tcp connection with player
-                //
-                // if error closing
-                    // response = "RQT ERR\n";
-                // else
-                    //  response = "RQT OK\n";
-            } 
+                response = "RQT OK\n";
+            } else {
+                response = "RQT NOK\n";
+            }
         } else if (!strcmp(arg1, "REV")) {
 
             PLID = arg2;
@@ -255,12 +255,7 @@ void process(void)
             char* user_game_dir = create_user_game_dir(user_dir, PLID);
 
             if (check_ongoing_game(user_game_dir)) {
-                // close tcp connection with player
-                //
-                // if error closing
-                    // response = "RRV " + (string)word + "/" + "ERR\n";
-                // else
-                    //  response = "RRV " + (string)word + "/" + "OK\n";
+                response = "RRV " + (string)word + "\n";
             }
         } else {
             std::cerr << "ERROR_UDP: invalid command." << std::endl;
