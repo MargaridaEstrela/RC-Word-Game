@@ -1,7 +1,7 @@
 #include "../constants.hpp"
 
 #include <arpa/inet.h>
-#include <bits/stdc++.h>
+#include <cmath>
 #include <cstring>
 #include <ctype.h>
 #include <errno.h>
@@ -16,7 +16,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include<time.h>
+#include <time.h>
 #include <unistd.h>
 
 using namespace std;
@@ -54,9 +54,6 @@ void flag_decoder(int argc, char* argv[])
     return;
 }
 
-
-
-
 int TCP_read_to_file(int fd, string filename, int byte_size, string prefix)
 {
 
@@ -69,8 +66,8 @@ int TCP_read_to_file(int fd, string filename, int byte_size, string prefix)
     while (byte_size > 0) {
         n = read(fd, buffer, 1024);
         if (n == -1) {
-	    close(fd);
-            return -1; 
+            close(fd);
+            return -1;
         }
         if (n == 0) {
             break;
@@ -108,13 +105,13 @@ string TCP_send_receive(string message)
 
     errcode = getaddrinfo(GSIP.c_str(), GSPORT.c_str(), &hints, &res);
     if (errcode != 0) {
-	close(fd);
-	return "-1 TCP";
+        close(fd);
+        return "-1 TCP";
     }
 
     n = connect(fd, res->ai_addr, res->ai_addrlen);
     if (n == -1) {
-	close(fd);
+        close(fd);
         return "-1 TCP";
     }
 
@@ -124,7 +121,7 @@ string TCP_send_receive(string message)
         n = write(fd, message.c_str(), message.size());
         if (n == -1) {
             close(fd);
-	    return "-1 TCP";
+            return "-1 TCP";
         }
         n_left = n_left - n;
     }
@@ -134,7 +131,7 @@ string TCP_send_receive(string message)
     while (n_status_read > 0) {
         n = read(fd, buffer, n_status_read);
         if (n == -1) {
-	    close(fd);
+            close(fd);
             return "-1 TCP";
         }
         if (n == 0) {
@@ -173,44 +170,44 @@ string UDP_send_receive(string message)
 
     errcode = getaddrinfo(GSIP.c_str(), GSPORT.c_str(), &hints, &res);
     if (errcode != 0) {
-	close(fd);
+        close(fd);
         return "UDP";
     }
 
     n = sendto(fd, message.c_str(), message.size(), 0, res->ai_addr, res->ai_addrlen);
     if (n == -1) {
-	close(fd);
+        close(fd);
         return "UDP";
     }
 
     addrlen = sizeof(addr);
-  
+
     fd_set rfds;
     int counter;
     int maxfd;
     FD_ZERO(&rfds);
-    FD_SET(fd,&rfds);
+    FD_SET(fd, &rfds);
     maxfd = fd;
     struct timeval tv;
     tv.tv_sec = 5;
     tv.tv_usec = 0;
-    counter = select(maxfd+1,&rfds,(fd_set*)NULL,(fd_set*)NULL,&tv);
-    if (counter == -1){
-      close(fd);
-      return "UDP";
+    counter = select(maxfd + 1, &rfds, (fd_set*)NULL, (fd_set*)NULL, &tv);
+    if (counter == -1) {
+        close(fd);
+        return "UDP";
     }
 
-    if (counter == 0) { //TIMEOUT
-      cerr << "ERROR: No response was received from the server (timeout = 5 seconds). Please insert the command again\n";
-      return "LOST";
+    if (counter == 0) { // TIMEOUT
+        cerr << "ERROR: No response was received from the server (timeout = 5 seconds). Please insert the command again\n";
+        return "LOST";
     }
 
-    if (FD_ISSET(fd,&rfds)){
-      n = recvfrom(fd, buffer, 128, 0, (struct sockaddr*)&addr, &addrlen);
-      if (n == -1) {
-	  close(fd);
-          return "UDP";
-      }
+    if (FD_ISSET(fd, &rfds)) {
+        n = recvfrom(fd, buffer, 128, 0, (struct sockaddr*)&addr, &addrlen);
+        if (n == -1) {
+            close(fd);
+            return "UDP";
+        }
     }
 
     freeaddrinfo(res);
@@ -226,58 +223,55 @@ string UDP_send_receive(string message)
     return response;
 }
 
+void disconnect()
+{
 
-void disconnect(){
+    cout << "Requesting server for game termination...\n";
+    if (n_trials > -1) {
+        string word;
+        string request = "QUT " + PLID + "\n";
+        string response = UDP_send_receive(request);
+        stringstream rr(response);
+        rr >> word;
 
-  cout << "Requesting server for game termination...\n";
-  if (n_trials > -1) {
-    string word;
-    string request = "QUT " + PLID + "\n";
-    string response = UDP_send_receive(request);
-    stringstream rr(response);
-    rr >> word;
+        if (word == "UDP") {
+            cerr << "ERROR: System call for UDP message or reception has failed while trying to end current game. Terminating app...\n";
+            exit(EXIT_FAILURE);
+        } else if (word == "LOST") {
+            while (word == "LOST") {
+                cout << "Because message was lost during disconnect, another request will be automatically sent again\n";
+                response = UDP_send_receive(request);
+                stringstream rr(response);
+                rr >> word;
+            }
 
-    if (word == "UDP"){
-      cerr << "ERROR: System call for UDP message or reception has failed while trying to end current game. Terminating app...\n";
-      exit(EXIT_FAILURE); 
-    }
-    else if (word == "LOST"){
-	    while (word == "LOST"){
-	       cout << "Because message was lost during disconnect, another request will be automatically sent again\n";	    
-	       response = UDP_send_receive(request);
-	       stringstream rr(response);
-	       rr >> word;
-	    }
+        }
 
-    }
+        else if (word != "RQT") {
+            cerr << "ERROR: Wrong Protocol Message received while trying to end current game. Terminating app...\n";
+            exit(EXIT_FAILURE);
+        }
+        rr >> word;
+        if (word == "OK") {
+            cout << "Ongoing game has been closed\n";
+            n_trials = -1;
+            delete[] guessed;
+        }
 
-    else if (word != "RQT") {
-      cerr << "ERROR: Wrong Protocol Message received while trying to end current game. Terminating app...\n";
-      exit(EXIT_FAILURE);
-    }
-    rr >> word;
-    if (word == "OK") {
-      cout << "Ongoing game has been closed\n";
-      n_trials = -1;
-      delete[] guessed;
-    }
+        else if (word == "ERR") {
+            cout << "No ongoing game has been found\n";
+        }
 
-    else if (word == "ERR") {
-      cout << "No ongoing game has been found\n";
+        else {
+            cerr << "ERROR: Wrong Protocol Message received while trying to end current game. Terminating app...\n";
+            exit(EXIT_FAILURE);
+        }
     }
 
     else {
-      cerr << "ERROR: Wrong Protocol Message received while trying to end current game. Terminating app...\n";
-      exit(EXIT_FAILURE);
+        cout << "No ongoing game at the moment\n";
     }
-  } 
-
-  else {
-    cout << "No ongoing game at the moment\n";
-  }
-
 }
-
 
 int main(int argc, char* argv[])
 {
@@ -288,11 +282,10 @@ int main(int argc, char* argv[])
     string command;
     string fields[2];
 
-
     while (1) {
         getline(cin, command_line, '\n');
-	fields[0]="";
-	fields[1]="";
+        fields[0] = "";
+        fields[1] = "";
         int f_counter = 0;
         string word;
         stringstream ss(command_line);
@@ -315,42 +308,42 @@ int main(int argc, char* argv[])
 
         if (command == "start" || command == "sg") {
             if (fields[1] == "") {
-              cerr << "ERROR: No PLID was given\n";
-              continue;
+                cerr << "ERROR: No PLID was given\n";
+                continue;
             }
 
-	    if (PLID != "" && PLID != fields[1]){
-	      cout << "Given PLID (" + fields[1] + ") is different from the last PLID used (" + PLID + "). Disconnecting old player...\n";
-	      disconnect();
-	    }
+            if (PLID != "" && PLID != fields[1]) {
+                cout << "Given PLID (" + fields[1] + ") is different from the last PLID used (" + PLID + "). Disconnecting old player...\n";
+                disconnect();
+            }
 
             string request = "SNG " + fields[1] + "\n";
             string response = UDP_send_receive(request);
             stringstream rr(response);
             rr >> word;
 
-	    if (word == "UDP"){
-	      cerr << "ERROR: A System call for UDP message or reception has failed. Terminating connection...\n";
-	      disconnect();
-	      cout << "Closing game app...\n";
-	      exit(EXIT_FAILURE);
-	    } 
-
-	    if (word == "ERR"){
-	      cerr << "ERROR: Unexpected protocol message received by server. PLID given may be invalid (has to be exactly 6 digits)\n";
-	      continue;
+            if (word == "UDP") {
+                cerr << "ERROR: A System call for UDP message or reception has failed. Terminating connection...\n";
+                disconnect();
+                cout << "Closing game app...\n";
+                exit(EXIT_FAILURE);
             }
 
-	    if (word == "LOST"){
-	      continue; //UDP Message Lost
-	    }
+            if (word == "ERR") {
+                cerr << "ERROR: Unexpected protocol message received by server. PLID given may be invalid (has to be exactly 6 digits)\n";
+                continue;
+            }
 
-	    else if (word != "RSG") {
+            if (word == "LOST") {
+                continue; // UDP Message Lost
+            }
+
+            else if (word != "RSG") {
                 cerr << "ERROR: Wrong Protocol Message Received. Terminating connection...\n";
-		disconnect();
-		cout << "Closing game app...\n";
+                disconnect();
+                cout << "Closing game app...\n";
                 exit(EXIT_FAILURE);
-	    }
+            }
 
             rr >> word;
             string output;
@@ -370,16 +363,16 @@ int main(int argc, char* argv[])
                 }
             }
 
-	    else if (word == "NOK") {
+            else if (word == "NOK") {
                 output = "Game still in progress. Use command 'quit' to end current game";
             }
-	    
-	    else {
+
+            else {
                 cerr << "ERROR: Wrong Protocol Message Received. Terminating connection...\n";
-		disconnect();
-		cout << "Closing game app...\n";
+                disconnect();
+                cout << "Closing game app...\n";
                 exit(EXIT_FAILURE);
-	    }
+            }
 
             cout << output + "\n";
 
@@ -395,7 +388,7 @@ int main(int argc, char* argv[])
 
             n_trials++;
 
-	    transform(fields[1].begin(), fields[1].end(), fields[1].begin(), ::toupper);
+            transform(fields[1].begin(), fields[1].end(), fields[1].begin(), ::toupper);
 
             string request = "PLG " + PLID + " " + fields[1] + " " + to_string(n_trials) + "\n";
             string response = UDP_send_receive(request);
@@ -403,24 +396,24 @@ int main(int argc, char* argv[])
             stringstream rr(response);
             rr >> word;
 
-	    if (word == "UDP"){
-	      cerr << "ERROR: A System call for UDP message or reception has failed. Terminating connection...\n";
-	      n_trials--;
-	      disconnect();
-	      cout << "Closing game app...\n";
-	      exit(EXIT_FAILURE);
-	    } 
+            if (word == "UDP") {
+                cerr << "ERROR: A System call for UDP message or reception has failed. Terminating connection...\n";
+                n_trials--;
+                disconnect();
+                cout << "Closing game app...\n";
+                exit(EXIT_FAILURE);
+            }
 
-	    if (word == "LOST"){
-		n_trials--;
-		continue; //UDP Message Lost
-	    }
+            if (word == "LOST") {
+                n_trials--;
+                continue; // UDP Message Lost
+            }
 
-	    else if (word != "RLG") {
+            else if (word != "RLG") {
                 cerr << "ERROR: Wrong Protocol Message Received. Terminating connection...\n";
-		n_trials--;
-		disconnect();
-		cout << "Closing game app...\n";
+                n_trials--;
+                disconnect();
+                cout << "Closing game app...\n";
                 exit(EXIT_FAILURE);
             }
 
@@ -476,31 +469,31 @@ int main(int argc, char* argv[])
 
             else if (word == "INV") {
                 cerr << "ERROR: The number of trials is not coherent with the server. If a UDP timeout occured, please repeat the exact command\n";
-	        continue;	
+                continue;
             }
 
             else if (word == "ERR") {
-		n_trials--;
+                n_trials--;
                 cerr << "ERROR: The 'play' command was rejected by the server. Check if there is an ongoing game with the 'state' command\n";
                 continue;
             }
 
-	    else {
+            else {
                 cerr << "ERROR: Wrong Protocol Message Received. Terminating connection...\n";
-		n_trials--;
-		disconnect();
-		cout << "Closing game app...\n";
+                n_trials--;
+                disconnect();
+                cout << "Closing game app...\n";
                 exit(EXIT_FAILURE);
-	    }
+            }
 
         } else if (command == "guess" || command == "gw") {
-             
-	    if (fields[1] == "") {
+
+            if (fields[1] == "") {
                 cerr << "ERROR: No guess word was given\n";
                 continue;
             }
 
-	    transform(fields[1].begin(), fields[1].end(), fields[1].begin(), ::toupper);
+            transform(fields[1].begin(), fields[1].end(), fields[1].begin(), ::toupper);
 
             n_trials++;
             string request = "PWG " + PLID + " " + fields[1] + " " + to_string(n_trials) + "\n";
@@ -509,24 +502,24 @@ int main(int argc, char* argv[])
 
             rr >> word;
 
-	    if (word == "UDP"){
-	      cerr << "ERROR: A System call for UDP message or reception has failed. Terminating connection...\n";
-	      n_trials--;
-	      disconnect();
-	      cout << "Closing game app...\n";
-	      exit(EXIT_FAILURE);
-	    } 
+            if (word == "UDP") {
+                cerr << "ERROR: A System call for UDP message or reception has failed. Terminating connection...\n";
+                n_trials--;
+                disconnect();
+                cout << "Closing game app...\n";
+                exit(EXIT_FAILURE);
+            }
 
-	    if (word == "LOST"){
-		n_trials--;
-		continue; //UDP Message Lost
-	    }
-	    
-	    else if (word != "RWG") {
-		n_trials--;
+            if (word == "LOST") {
+                n_trials--;
+                continue; // UDP Message Lost
+            }
+
+            else if (word != "RWG") {
+                n_trials--;
                 cerr << "ERROR: Wrong Protocol Message Received. Terminating connection\n";
-		disconnect();
-		cout << "Closing game app...\n";
+                disconnect();
+                cout << "Closing game app...\n";
                 exit(EXIT_FAILURE);
             }
             rr >> word;
@@ -535,32 +528,28 @@ int main(int argc, char* argv[])
                 cout << "WELL DONE! You guessed: " + fields[1] + "\n";
                 n_trials = -1;
                 delete[] guessed;
-            } 
-	    else if (word == "NOK") {
+            } else if (word == "NOK") {
                 cout << "The guess \"" + fields[1] + "\" is not the hidden word. Try again\n";
-            } 
-	    else if (word == "OVR") {
+            } else if (word == "OVR") {
                 cout << "GAME OVER! You have reached the max error limit for this word. Play another round?\n";
                 n_trials = -1;
                 delete[] guessed;
                 continue;
-            }
-	    else if (word == "INV") {
+            } else if (word == "INV") {
                 cerr << "ERROR: The number of trials is not coherent with the server. If a UDP timeout occured, please repeat the exact command\n";
-            } 
-	    else if (word == "ERR") {
-		n_trials--;
+            } else if (word == "ERR") {
+                n_trials--;
                 cerr << "ERROR: The 'guess' command was rejected by the server. No game must be active or word isn't valid (3-30 letters long)\n";
                 continue;
             }
 
-	    else {
+            else {
                 cerr << "ERROR: Wrong Protocol Message Received. Terminating connection...\n";
-		n_trials--;
-		disconnect();
-		cout << "Closing game app...\n";
+                n_trials--;
+                disconnect();
+                cout << "Closing game app...\n";
                 exit(EXIT_FAILURE);
-	    }
+            }
 
         } else if (command == "scoreboard" || command == "sb") {
             if (fields[1] != "") {
@@ -573,26 +562,26 @@ int main(int argc, char* argv[])
             string code;
             rr >> fd;
             rr >> code;
-	    if (code == "TCP"){
-	      cerr << "ERROR: A System call for TCP message or reception has failed. Terminating connection...\n";
-	      disconnect();
-	      cout << "Closing game app...\n";
-	      exit(EXIT_FAILURE);
-	    }
-
-	    else if (code == "ERR"){
-	      cerr << "ERROR: Unexpected protocol message received by server. Terminating connection...\n";
-	      close(fd);
-	      disconnect();
-	      cout << "Closing game app...\n";
-	      exit(EXIT_FAILURE);
+            if (code == "TCP") {
+                cerr << "ERROR: A System call for TCP message or reception has failed. Terminating connection...\n";
+                disconnect();
+                cout << "Closing game app...\n";
+                exit(EXIT_FAILURE);
             }
 
-	    else if (code != "RSB") {
+            else if (code == "ERR") {
+                cerr << "ERROR: Unexpected protocol message received by server. Terminating connection...\n";
+                close(fd);
+                disconnect();
+                cout << "Closing game app...\n";
+                exit(EXIT_FAILURE);
+            }
+
+            else if (code != "RSB") {
                 cerr << "ERROR: Wrong Protocol Message Received. Terminating connection\n";
                 close(fd);
-		disconnect();
-		cout << "Closing game app...\n";
+                disconnect();
+                cout << "Closing game app...\n";
                 exit(EXIT_FAILURE);
             }
 
@@ -602,21 +591,20 @@ int main(int argc, char* argv[])
                 cout << "No games have yet been won on this server\n";
                 close(fd);
 
-            } 
-	    else if (status == "OK") {
+            } else if (status == "OK") {
                 string filename;
                 int size;
                 string prefix;
                 rr >> filename;
                 rr >> size;
                 rr >> prefix;
-                int i = TCP_read_to_file(fd, filename, size-45, prefix);
-		if (i == -1){
-	          cerr << "ERROR: A System call for TCP message or reception during file transfer has failed. Terminating connection...\n";
-		  disconnect();
-		  cout << "Closing game app...\n";
-		  exit(EXIT_FAILURE);
-		}
+                int i = TCP_read_to_file(fd, filename, size - 45, prefix);
+                if (i == -1) {
+                    cerr << "ERROR: A System call for TCP message or reception during file transfer has failed. Terminating connection...\n";
+                    disconnect();
+                    cout << "Closing game app...\n";
+                    exit(EXIT_FAILURE);
+                }
 
                 ifstream file(filename);
                 if (file.is_open()) {
@@ -625,23 +613,22 @@ int main(int argc, char* argv[])
 
                 file.close();
                 cout << "Local copy of the scoreboard saved in file: " + filename + "\n";
-            }
-	    else {
+            } else {
                 cerr << "ERROR: Wrong Protocol Message Received. Terminating connection...\n";
-		close(fd);
-		disconnect();
-		cout << "Closing game app...\n";
-		exit(EXIT_FAILURE);
-	    }
+                close(fd);
+                disconnect();
+                cout << "Closing game app...\n";
+                exit(EXIT_FAILURE);
+            }
 
         } else if (command == "hint" || command == "h") {
-            if (PLID == ""){
-	      cerr << "ERROR: PLID is currently NULL (no 'start' command has been used)\n";
-	      continue;
-	    }
-	    if (fields[1] != "") {
-              cerr << "ERROR: Argument not required in this command\n";
-              continue;
+            if (PLID == "") {
+                cerr << "ERROR: PLID is currently NULL (no 'start' command has been used)\n";
+                continue;
+            }
+            if (fields[1] != "") {
+                cerr << "ERROR: Argument not required in this command\n";
+                continue;
             }
             string response = TCP_send_receive("GHL " + PLID + "\n");
             stringstream rr(response);
@@ -650,27 +637,27 @@ int main(int argc, char* argv[])
             rr >> fd;
             rr >> code;
 
-            if (code == "TCP"){
-	      cerr << "ERROR: System call for TCP message or reception has failed. Terminating connection...\n";
-	      disconnect();
-	      cout << "Closing game app...\n";
-	      exit(EXIT_FAILURE);
-	    }
+            if (code == "TCP") {
+                cerr << "ERROR: System call for TCP message or reception has failed. Terminating connection...\n";
+                disconnect();
+                cout << "Closing game app...\n";
+                exit(EXIT_FAILURE);
+            }
 
-	    else if (code == "ERR"){
-	      cerr << "ERROR: Unexpected protocol message received by server. Terminating connection...\n";
-	      close(fd);
-	      disconnect();
-	      cout << "Closing game app...\n";
-	      exit(EXIT_FAILURE);
-	    }
+            else if (code == "ERR") {
+                cerr << "ERROR: Unexpected protocol message received by server. Terminating connection...\n";
+                close(fd);
+                disconnect();
+                cout << "Closing game app...\n";
+                exit(EXIT_FAILURE);
+            }
 
-	    else if (code != "RHL") {
+            else if (code != "RHL") {
                 cerr << "ERROR: Wrong Protocol Message Received. Terminating connection\n";
                 close(fd);
                 disconnect();
-		cout << "Closing game app...\n";
-		exit(EXIT_FAILURE);
+                cout << "Closing game app...\n";
+                exit(EXIT_FAILURE);
             }
             string status;
             rr >> status;
@@ -685,30 +672,29 @@ int main(int argc, char* argv[])
                 rr >> size;
                 rr >> prefix;
                 int i = TCP_read_to_file(fd, filename, size - 45, prefix);
-		if (i == -1){
-		  cerr << "ERROR: System call for TCP message or reception during file transfer has failed. Terminating connection...\n";
-		  disconnect();
-		  cout << "Closing game app...\n";
-		  exit(EXIT_FAILURE);
-		}
+                if (i == -1) {
+                    cerr << "ERROR: System call for TCP message or reception during file transfer has failed. Terminating connection...\n";
+                    disconnect();
+                    cout << "Closing game app...\n";
+                    exit(EXIT_FAILURE);
+                }
                 cout << "Received hint file: " + filename + " (";
                 cout << size;
                 cout << " bytes)\n";
+            } else {
+                cerr << "ERROR: Wrong Protocol Message Received. Terminating connection...\n";
+                close(fd);
+                disconnect();
+                cout << "Closing game app...\n";
+                exit(EXIT_FAILURE);
             }
-	    else {
-	        cerr << "ERROR: Wrong Protocol Message Received. Terminating connection...\n";
-		close(fd);
-		disconnect();
-		cout << "Closing game app...\n";
-		exit(EXIT_FAILURE);
-	    }
 
         } else if (command == "state" || command == "st") {
 
-	    if (PLID == ""){
-		cerr << "ERROR: PLID is currently NULL (no 'start' command has been used)\n";
-		continue;
-	    }
+            if (PLID == "") {
+                cerr << "ERROR: PLID is currently NULL (no 'start' command has been used)\n";
+                continue;
+            }
             if (fields[1] != "") {
                 cerr << "ERROR: Argument not required in this command\n";
                 continue;
@@ -720,26 +706,26 @@ int main(int argc, char* argv[])
             string code;
             rr >> fd;
             rr >> code;
-	    if (code == "TCP"){
-		cerr << "ERROR: System call for TCP message or reception has failed. Terminating connection...\n";
-		disconnect();
-		cout << "Closing game app...\n";
-		exit(EXIT_FAILURE);
+            if (code == "TCP") {
+                cerr << "ERROR: System call for TCP message or reception has failed. Terminating connection...\n";
+                disconnect();
+                cout << "Closing game app...\n";
+                exit(EXIT_FAILURE);
             }
 
-	    else if (code == "ERR"){
-	      cerr << "ERROR: Unexpected protocol message received by server. Terminating connection...\n";
-	      close(fd);
-	      disconnect();
-	      cout << "Closing game app...\n";
-	      exit(EXIT_FAILURE);
-	    }
+            else if (code == "ERR") {
+                cerr << "ERROR: Unexpected protocol message received by server. Terminating connection...\n";
+                close(fd);
+                disconnect();
+                cout << "Closing game app...\n";
+                exit(EXIT_FAILURE);
+            }
 
-	    else if (code != "RST") {
+            else if (code != "RST") {
                 cerr << "ERROR: Wrong Protocol Message Received. Terminating connection...\n";
                 close(fd);
-		disconnect();
-		cout << "Closing game app...\n";
+                disconnect();
+                cout << "Closing game app...\n";
                 exit(EXIT_FAILURE);
             }
             string status;
@@ -759,12 +745,12 @@ int main(int argc, char* argv[])
                 }
                 prefix.pop_back();
                 int i = TCP_read_to_file(fd, filename, size - 45, prefix);
-		if (i == -1){
-		   cerr << "ERROR: System call for TCP message or reception during file transfer has failed. Terminating connection...\n";
-		   disconnect();
-		   cout << "Closing game app...\n";
-		   exit(EXIT_FAILURE);
-		}
+                if (i == -1) {
+                    cerr << "ERROR: System call for TCP message or reception during file transfer has failed. Terminating connection...\n";
+                    disconnect();
+                    cout << "Closing game app...\n";
+                    exit(EXIT_FAILURE);
+                }
                 ifstream file(filename);
                 if (file.is_open()) {
                     cout << file.rdbuf();
@@ -788,17 +774,11 @@ int main(int argc, char* argv[])
                 cerr << "ERROR: Argument not required in this command\n";
                 continue;
             }
-            disconnect(); 
-	    cout << "Exiting player application. Until next time!\n";
+            disconnect();
+            cout << "Exiting player application. Until next time!\n";
             exit(EXIT_SUCCESS);
-        } 
-	else {
+        } else {
             cerr << "ERROR: Command name not known\n";
         }
     }
 }
-
-
-
-
-
