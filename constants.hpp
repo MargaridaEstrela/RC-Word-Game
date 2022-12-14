@@ -3,6 +3,8 @@
 
 // SIZES
 #define MAX_COMMAND_LINE 128
+#define MAX_TCP_RESPONSE 45
+#define MAX_TCP_READ 1024
 
 // STATUS CODES
 #define STATUS_OK 2
