@@ -1,22 +1,23 @@
 #ifndef DATA
 #define DATA
 
-#include <cstring>
-#include <ctype.h>
-#include <errno.h>
-#include <iostream>
-#include <sstream>
+#include <sys/types.h>
+#include <filesystem>
+#include <sys/stat.h>
 #include <stdexcept>
-#include <stdio.h>
+#include <iostream>
+#include <unistd.h>
+#include <dirent.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <filesystem>
+#include <fstream>
+#include <cstring>
+#include <ctype.h>
+#include <errno.h>
+#include <sstream>
+#include <stdio.h>
 #include <string>
-#include <dirent.h>
 
 
 // DIRECTORIES
@@ -24,19 +25,26 @@
 #define SCORES_DIR "../SCORES"
 
 // USER PATH
-#define USR_DIR "../GAMES/xxxxxx"
-#define GAME_USR_DIR "../GAMES/xxxxxx/GAME_xxxxxx.txt"
+#define USER_DIR "../GAMES/xxxxxx"
+#define USER_OG_GAME_DIR "../GAMES/GAME_xxxxxx.txt" //on_going games
 
 // FILE EXTENSION
 #define HINT_FILE_EXTENSION "_hint.txt"
-
 
 
 using string = std::string;
 
 
 int register_user(char *PLID);
-bool user_exists(char *PLID);
+
+bool user_exists(char *path);
+bool check_ongoing_game(char *path);
+
 char* create_user_dir(char *PLID);
+char* create_user_game_dir(char *user_dir, char *PLID);
+
+char* get_last_guess_letter(char *PLID);
+char* get_last_guess_word(char *PLID);
+int get_trials(char *PLID);
 
 #endif //!DATA
