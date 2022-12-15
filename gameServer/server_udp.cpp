@@ -74,7 +74,6 @@ void setup_udp(void)
         perror("bind failed");
         exit(1);
     }
-
     return;
 }
 
@@ -99,7 +98,6 @@ int check_letter(char* letter)
     } else if (n == 1) {
         return STATUS_WIN;
     }
-
     return STATUS_OK;
 }
 
@@ -208,7 +206,7 @@ void process(void)
 
             if (arg2 != PLID || check_ongoing_game(user_game_dir)) {
                 response = "RWG ERR\n";
-            } 
+            }
 
             trials = get_trials(PLID);
             last_guess_word = get_last_guess_word(PLID);
@@ -220,15 +218,15 @@ void process(void)
             status = check_word(arg3);
 
             switch (status) {
-                case STATUS_WIN:
-                    response = "RWG WIN " + std::to_string(trials) + "\n";
-                    break;
-                case STATUS_NOK:
-                    response = "RWG WIN " + std::to_string(trials) + "\n";
-                    break;
-                case STATUS_OVR:
-                    response = "RWG OVR " + std::to_string(trials) + "\n";
-                    break;
+            case STATUS_WIN:
+                response = "RWG WIN " + std::to_string(trials) + "\n";
+                break;
+            case STATUS_NOK:
+                response = "RWG WIN " + std::to_string(trials) + "\n";
+                break;
+            case STATUS_OVR:
+                response = "RWG OVR " + std::to_string(trials) + "\n";
+                break;
             }
 
         } else if (!strcmp(arg1, "QUT")) {
