@@ -42,7 +42,7 @@ char* last_guess_letter;
 char* last_guess_word;
 
 // FUNCTIONS
-void setup(void);
+void setup(void); // Aqui não é setup_udp?
 int max_errors(int word_size);
 void process(void);
 void end_UDP_session(void);
@@ -105,7 +105,7 @@ int check_word(char* guess_word)
 {
     char* last_guess_word = get_last_guess_word(PLID);
 
-    if (!strcmp(guess_word, last_guess_letter)) {
+    if (!strcmp(guess_word, last_guess_word)) { 
         return STATUS_WIN;
     } else if (get_trials(PLID) < errors) {
         return STATUS_NOK;
@@ -126,6 +126,9 @@ void process(void)
             &addrlen);
 
         printf("message received\n");
+        int i = ntohs(addr.sin_port);
+        char *ip = inet_ntoa(addr.sin_addr);
+        printf("Port: %d | IP: %s\n",i,ip);
 
         if (n < 0) {
             perror("recvfrom failed");
@@ -150,6 +153,8 @@ void process(void)
                 std::cerr << "PLID: bad format. PLID is always sent using 6 digits."
                           << std::endl;
                 exit(EXIT_FAILURE);
+                // Aqui não pode ser exit, tens de mandar uma resposta ao cliente ("RSG ERR")
+                // Por mim tiravamos isto e ficavamos so com o register user que trata disto tambem
             }
 
             PLID = arg2;

@@ -9,7 +9,9 @@
 int register_user(char* PLID)
 {
     if (!check_PLID(PLID)) {
-        return STATUS_NOK;
+        return STATUS_NOK; // Aqui não pode ser STATUS_NOK, isso vai entrar em conflito com o STATUS_NOK do comando start
+                           // Para além disso esta função faz o mesmo do que o que está no inicio do comando start, por isso
+                           // podemos tirar essa parte de lá e ficamos só com esta (e esta retorna STATUS_ERR)
     }
 
     std::ifstream game;
@@ -31,10 +33,10 @@ int register_user(char* PLID)
 
     game_user_dir = create_user_game_dir(user_dir, PLID);
 
-    if (check_ongoing_game(game_user_dir)) {
-        game.open(game_user_dir);
-
-        if (game.is_open()) {
+    if (check_ongoing_game(game_user_dir)) { // Estás a ter o pensamento errado aqui. Tu queres dar OK se nenhum jogo estiver ativo
+        game.open(game_user_dir);            // e NOK se estiver (ou seja, está ao contrário)
+                                             // No entanto, um jogo sem jogadas nenhumas também conta como um mensagem OK, por isso
+        if (game.is_open()) {                // temos de verificar isso
             int count = 0;
             string line;
             string word;
@@ -57,11 +59,11 @@ int register_user(char* PLID)
         }
     }
 
-    return STATUS_NOK;
+    return STATUS_NOK; 
 }
 
-bool user_exists(char* path)
-{
+bool user_exists(char* path) // Penso que esta função não funciona, acho que o opendir não deteta diretorias existentes
+{                            // Estou a dizer isto porque esta função dá verdadeiro mesmo usando PLID's novos
     DIR* user_dir;
     user_dir = opendir(path);
 
