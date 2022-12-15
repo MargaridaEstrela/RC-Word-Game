@@ -9,10 +9,10 @@ all: player server server_udp
 
 
 # PLAYER
-player: playerApp/player.o
-		g++ $(CXXFLAGS) -o player playerApp/player.o
+player: playerApp/player.o aux_functions.o
+		g++ $(CXXFLAGS) -o player playerApp/player.o aux_functions.o
 
-playerApp/player.o: playerApp/player.cpp
+playerApp/player.o: playerApp/player.cpp aux_functions.hpp
 		g++ $(CXXFLAGS) -o playerApp/player.o -c playerApp/player.cpp
 
 

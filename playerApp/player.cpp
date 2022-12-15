@@ -1,4 +1,5 @@
 #include "../constants.hpp"
+#include "../aux_functions.hpp"
 
 #include <algorithm>
 #include <arpa/inet.h>
@@ -274,15 +275,15 @@ void disconnect()
     }
 }
 
-
-int error_check(string code,string protocol){
+int error_check(string code, string protocol)
+{
     if (code == ERR_UDP) {
         cerr << "ERROR: A System call for UDP message or reception has failed. Terminating connection...\n";
         disconnect();
         cout << "Closing game app...\n";
         exit(EXIT_FAILURE);
     }
-        
+
     else if (code == ERR_TCP) {
         cerr << "ERROR: A System call for TCP message or reception has failed. Terminating connection...\n";
         disconnect();
@@ -309,57 +310,12 @@ int error_check(string code,string protocol){
     else {
         return 0;
     }
-
 }
 
-int translate_status (string state){
-    if (state == "OK") {
-        return STATUS_OK;
-    }
-        
-    else if (state == "WIN") {
-        return STATUS_WIN;
-    }
 
-    else if (state == "DUP") {
-        return STATUS_DUP;
-    }
 
-    else if (state == "NOK") {
-        return STATUS_NOK;
-    }
-
-    else if (state == "OVR") {
-        return STATUS_OVR;
-    }
-
-    else if (state == "INV") {
-        return STATUS_INV;
-    }
-
-    else if (state == "ERR") {
-        return STATUS_ERR;
-    }
-
-    else if (state == "EMPTY") {
-        return STATUS_EMPTY;
-    }
-
-    else if (state == "ACT") {
-        return STATUS_ACT;
-    }
-
-    else if (state == "FIN") {
-        return STATUS_FIN;
-    }
-
-    else {
-        return -1;
-    }  
-
-}
-
-void start_command(string ID){
+void start_command(string ID)
+{
 
     if (ID == "") {
         cerr << "ERROR: No PLID was given\n";
@@ -377,8 +333,8 @@ void start_command(string ID){
     string word;
     rr >> word;
 
-    int err = error_check(word,"RSG");
-    if (err == -1){
+    int err = error_check(word, "RSG");
+    if (err == -1) {
         return;
     }
 
@@ -387,40 +343,40 @@ void start_command(string ID){
     int status = translate_status(word);
 
     switch (status) {
-        case STATUS_OK: {
-            PLID = ID;
-            string n_misses;
-            rr >> n_letters;
-            rr >> n_misses;
-            n_trials = 0;
-            output = "New game started (max " + n_misses + " errors): ";
-            guessed = new char[n_letters];
+    case STATUS_OK: {
+        PLID = ID;
+        string n_misses;
+        rr >> n_letters;
+        rr >> n_misses;
+        n_trials = 0;
+        output = "New game started (max " + n_misses + " errors): ";
+        guessed = new char[n_letters];
 
-            for (int c = 0; c < n_letters; c++) {
-                output += "_ ";
-                guessed[c] = '_';
-            }
-            break;
+        for (int c = 0; c < n_letters; c++) {
+            output += "_ ";
+            guessed[c] = '_';
         }
-        case STATUS_NOK: {
-            output = "Game still in progress. Use command 'quit' to end current game";
-            break;
-        }
-        default: {
-            cerr << "ERROR: Wrong Protocol Message Received. Terminating connection...\n";
-            disconnect();
-            cout << "Closing game app...\n";
-            exit(EXIT_FAILURE);
-            break;
-        }
+        break;
+    }
+    case STATUS_NOK: {
+        output = "Game still in progress. Use command 'quit' to end current game";
+        break;
+    }
+    default: {
+        cerr << "ERROR: Wrong Protocol Message Received. Terminating connection...\n";
+        disconnect();
+        cout << "Closing game app...\n";
+        exit(EXIT_FAILURE);
+        break;
+    }
     }
 
     cout << output + "\n";
     return;
-
 }
 
-void play_command(string letter){
+void play_command(string letter)
+{
 
     if (letter == "") {
         cerr << "ERROR: No letter was given\n";
@@ -441,86 +397,87 @@ void play_command(string letter){
     string word;
     rr >> word;
 
-    int i = error_check(word,"RLG");
-    if (i == -1){
+    int i = error_check(word, "RLG");
+    if (i == -1) {
         return;
     }
 
     rr >> word;
-    string output="";
+    string output = "";
     int status = translate_status(word);
-    switch(status){
+    switch (status) {
 
-        case STATUS_OK: {
-            int ocorr;
-            rr >> word;
-            rr >> ocorr;
-            int pos[ocorr];
+    case STATUS_OK: {
+        int ocorr;
+        rr >> word;
+        rr >> ocorr;
+        int pos[ocorr];
 
-            for (int j = 0; j < ocorr; j++) {
-                rr >> pos[j];
+        for (int j = 0; j < ocorr; j++) {
+            rr >> pos[j];
+        }
+        int k = 0;
+        for (int j = 0; j < n_letters; j++) {
+            if (j == (pos[k] - 1)) {
+                k++;
+                guessed[j] = letter.at(0);
             }
-            int k = 0;
-            for (int j = 0; j < n_letters; j++) {
-                if (j == (pos[k] - 1)) {
-                    k++;
-                    guessed[j] = letter.at(0);
-                }
-                output = output + guessed[j] + " ";
+            output = output + guessed[j] + " ";
+        }
+        cout << "Yes, \"" + letter + "\" is part of the word: " + output + "\n";
+        break;
+    }
+    case STATUS_WIN: {
+        for (int j = 0; j < n_letters; j++) {
+            if (guessed[j] == '_') {
+                guessed[j] = letter.at(0);
             }
-            cout << "Yes, \"" + letter + "\" is part of the word: " + output + "\n";
-            break;
+            output = output + guessed[j];
         }
-        case STATUS_WIN: {
-            for (int j = 0; j < n_letters; j++) {
-                if (guessed[j] == '_') {
-                    guessed[j] = letter.at(0);
-                }
-                output = output + guessed[j];
-            }
-            cout << "WELL DONE! The word was: " + output + "\n";
-            n_trials = -1;
-            delete[] guessed;
-            break;
-        }
-        case STATUS_DUP: {
-            cout << "The letter \"" + letter + "\" has already been played. Try a new one\n";
-            n_trials--;
-            break;
-        }
-        case STATUS_NOK: {
-            cout << "The letter \"" + letter + "\" is not part of the word. Try again\n";
-            break;
-        }
-        case STATUS_OVR: {
-            cout << "GAME OVER! You have reached the max error limit for this word. Play another round?\n";
-            n_trials = -1;
-            delete[] guessed;
-            break;
-        }
-        case STATUS_INV: {
-            cerr << "ERROR: The number of trials is not coherent with the server. If a UDP timeout occured, please repeat the exact command\n";
-            break;
-        }
-        case STATUS_ERR: {
-            n_trials--;
-            cerr << "ERROR: The 'play' command was rejected by the server. Check if there is an ongoing game with the 'state' command\n";
-            break; 
-        }
-        default: {
-            cerr << "ERROR: Wrong Protocol Message Received. Terminating connection...\n";
-            n_trials--;
-            disconnect();
-            cout << "Closing game app...\n";
-            exit(EXIT_FAILURE);
-            break;
-        }
+        cout << "WELL DONE! The word was: " + output + "\n";
+        n_trials = -1;
+        delete[] guessed;
+        break;
+    }
+    case STATUS_DUP: {
+        cout << "The letter \"" + letter + "\" has already been played. Try a new one\n";
+        n_trials--;
+        break;
+    }
+    case STATUS_NOK: {
+        cout << "The letter \"" + letter + "\" is not part of the word. Try again\n";
+        break;
+    }
+    case STATUS_OVR: {
+        cout << "GAME OVER! You have reached the max error limit for this word. Play another round?\n";
+        n_trials = -1;
+        delete[] guessed;
+        break;
+    }
+    case STATUS_INV: {
+        cerr << "ERROR: The number of trials is not coherent with the server. If a UDP timeout occured, please repeat the exact command\n";
+        break;
+    }
+    case STATUS_ERR: {
+        n_trials--;
+        cerr << "ERROR: The 'play' command was rejected by the server. Check if there is an ongoing game with the 'state' command\n";
+        break;
+    }
+    default: {
+        cerr << "ERROR: Wrong Protocol Message Received. Terminating connection...\n";
+        n_trials--;
+        disconnect();
+        cout << "Closing game app...\n";
+        exit(EXIT_FAILURE);
+        break;
+    }
     }
 
     return;
 }
 
-void guess_command(string guess){
+void guess_command(string guess)
+{
 
     if (guess == "") {
         cerr << "ERROR: No guess word was given\n";
@@ -536,52 +493,53 @@ void guess_command(string guess){
     string word;
     rr >> word;
 
-    int err = error_check(word,"RWG");
-    if (err == -1){
+    int err = error_check(word, "RWG");
+    if (err == -1) {
         return;
     }
 
     rr >> word;
     int status = translate_status(word);
     switch (status) {
-        case STATUS_WIN: {
-            cout << "WELL DONE! You guessed: " + guess + "\n";
-            n_trials = -1;
-            delete[] guessed;
-            break;
-        }
-        case STATUS_NOK: {
-            cout << "The guess \"" + guess + "\" is not the hidden word. Try again\n";
-            break;
-        }
-        case STATUS_OVR: {
-            cout << "GAME OVER! You have reached the max error limit for this word. Play another round?\n";
-            n_trials = -1;
-            delete[] guessed;
-            break;
-        }
-        case STATUS_INV: {
-            cerr << "ERROR: The number of trials is not coherent with the server. If a UDP timeout occured, please repeat the exact command\n";
-            break;
-        }
-        case STATUS_ERR: {
-            n_trials--;
-            cerr << "ERROR: The 'guess' command was rejected by the server. No game must be active or word isn't valid (3-30 letters long)\n";
-            break;
-        }
-        default: {
-            cerr << "ERROR: Wrong Protocol Message Received. Terminating connection...\n";
-            n_trials--;
-            disconnect();
-            cout << "Closing game app...\n";
-            exit(EXIT_FAILURE);
-            break;
-        }
+    case STATUS_WIN: {
+        cout << "WELL DONE! You guessed: " + guess + "\n";
+        n_trials = -1;
+        delete[] guessed;
+        break;
+    }
+    case STATUS_NOK: {
+        cout << "The guess \"" + guess + "\" is not the hidden word. Try again\n";
+        break;
+    }
+    case STATUS_OVR: {
+        cout << "GAME OVER! You have reached the max error limit for this word. Play another round?\n";
+        n_trials = -1;
+        delete[] guessed;
+        break;
+    }
+    case STATUS_INV: {
+        cerr << "ERROR: The number of trials is not coherent with the server. If a UDP timeout occured, please repeat the exact command\n";
+        break;
+    }
+    case STATUS_ERR: {
+        n_trials--;
+        cerr << "ERROR: The 'guess' command was rejected by the server. No game must be active or word isn't valid (3-30 letters long)\n";
+        break;
+    }
+    default: {
+        cerr << "ERROR: Wrong Protocol Message Received. Terminating connection...\n";
+        n_trials--;
+        disconnect();
+        cout << "Closing game app...\n";
+        exit(EXIT_FAILURE);
+        break;
+    }
     }
     return;
 }
 
-void scoreboard_command(){
+void scoreboard_command()
+{
 
     string response = TCP_send_receive("GSB\n");
     stringstream rr(response);
@@ -590,8 +548,8 @@ void scoreboard_command(){
     rr >> fd;
     rr >> code;
 
-    int i = error_check(code,"RSB");
-    if (i == -1){
+    int i = error_check(code, "RSB");
+    if (i == -1) {
         return;
     }
 
@@ -599,49 +557,49 @@ void scoreboard_command(){
     rr >> word;
     int status = translate_status(word);
     switch (status) {
-        case STATUS_OK: {
-            string filename;
-            int size;
-            string prefix;
-            rr >> filename;
-            rr >> size;
-            rr >> prefix;
-            int i = TCP_read_to_file(fd, filename, size - MAX_TCP_RESPONSE, prefix);
-            if (i == -1) {
-                cerr << "ERROR: A System call for TCP message or reception during file transfer has failed. Terminating connection...\n";
-                disconnect();
-                cout << "Closing game app...\n";
-                exit(EXIT_FAILURE);
-            }
-
-            ifstream file(filename);
-            if (file.is_open()) {
-                cout << file.rdbuf();
-            }
-
-            file.close();
-            cout << "Local copy of the scoreboard saved in file: " + filename + "\n";
-            break;
-        }
-        case STATUS_EMPTY: {
-            cout << "No games have yet been won on this server\n";
-            close(fd);
-            break;
-        }
-        default: {
-            cerr << "ERROR: Wrong Protocol Message Received. Terminating connection...\n";
-            close(fd);
+    case STATUS_OK: {
+        string filename;
+        int size;
+        string prefix;
+        rr >> filename;
+        rr >> size;
+        rr >> prefix;
+        int i = TCP_read_to_file(fd, filename, size - MAX_TCP_RESPONSE, prefix);
+        if (i == -1) {
+            cerr << "ERROR: A System call for TCP message or reception during file transfer has failed. Terminating connection...\n";
             disconnect();
             cout << "Closing game app...\n";
             exit(EXIT_FAILURE);
-            break;
         }
+
+        ifstream file(filename);
+        if (file.is_open()) {
+            cout << file.rdbuf();
+        }
+
+        file.close();
+        cout << "Local copy of the scoreboard saved in file: " + filename + "\n";
+        break;
+    }
+    case STATUS_EMPTY: {
+        cout << "No games have yet been won on this server\n";
+        close(fd);
+        break;
+    }
+    default: {
+        cerr << "ERROR: Wrong Protocol Message Received. Terminating connection...\n";
+        close(fd);
+        disconnect();
+        cout << "Closing game app...\n";
+        exit(EXIT_FAILURE);
+        break;
+    }
     }
     return;
-
 }
 
-void hint_command(){
+void hint_command()
+{
 
     string response = TCP_send_receive("GHL " + PLID + "\n");
     stringstream rr(response);
@@ -650,8 +608,8 @@ void hint_command(){
     rr >> fd;
     rr >> code;
 
-    int err = error_check(code,"RHL");
-    if (err == -1){
+    int err = error_check(code, "RHL");
+    if (err == -1) {
         return;
     }
 
@@ -659,44 +617,44 @@ void hint_command(){
     rr >> word;
     int status = translate_status(word);
     switch (status) {
-        case STATUS_OK: {
-            string filename;
-            int size;
-            string prefix;
-            rr >> filename;
-            rr >> size;
-            rr >> prefix;
-            int i = TCP_read_to_file(fd, filename, size - MAX_TCP_RESPONSE, prefix);
-            if (i == -1) {
-                cerr << "ERROR: System call for TCP message or reception during file transfer has failed. Terminating connection...\n";
-                disconnect();
-                cout << "Closing game app...\n";
-                exit(EXIT_FAILURE);
-            }
-            cout << "Received hint file: " + filename + " (";
-            cout << size;
-            cout << " bytes)\n";
-            break;
-        }
-        case STATUS_NOK: {
-            cout << "The server could not respond to the request. Try again later\n";
-            close(fd);
-            break;
-        }
-        default: {
-            cerr << "ERROR: Wrong Protocol Message Received. Terminating connection...\n";
-            close(fd);
+    case STATUS_OK: {
+        string filename;
+        int size;
+        string prefix;
+        rr >> filename;
+        rr >> size;
+        rr >> prefix;
+        int i = TCP_read_to_file(fd, filename, size - MAX_TCP_RESPONSE, prefix);
+        if (i == -1) {
+            cerr << "ERROR: System call for TCP message or reception during file transfer has failed. Terminating connection...\n";
             disconnect();
             cout << "Closing game app...\n";
             exit(EXIT_FAILURE);
-            break;
         }
+        cout << "Received hint file: " + filename + " (";
+        cout << size;
+        cout << " bytes)\n";
+        break;
+    }
+    case STATUS_NOK: {
+        cout << "The server could not respond to the request. Try again later\n";
+        close(fd);
+        break;
+    }
+    default: {
+        cerr << "ERROR: Wrong Protocol Message Received. Terminating connection...\n";
+        close(fd);
+        disconnect();
+        cout << "Closing game app...\n";
+        exit(EXIT_FAILURE);
+        break;
+    }
     }
     return;
-
 }
 
-void state_command(){
+void state_command()
+{
 
     string response = TCP_send_receive("STA " + PLID + "\n");
     stringstream rr(response);
@@ -705,62 +663,63 @@ void state_command(){
     rr >> fd;
     rr >> code;
 
-    int err = error_check(code,"RST");
+    int err = error_check(code, "RST");
+
+    if (err == -1) {
+        return;
+    }
 
     string word;
     rr >> word;
     int status = translate_status(word);
     switch (status) {
-        case STATUS_ACT:
-        case STATUS_FIN: {
-            string filename;
-            int size;
-            string prefix = "";
-            string word;
-            rr >> filename;
-            rr >> size;
-            while (rr >> word) {
-                prefix = prefix + word + " ";
-            }
-            prefix.pop_back();
-            int i = TCP_read_to_file(fd, filename, size - MAX_TCP_RESPONSE, prefix);
-            if (i == -1) {
-                cerr << "ERROR: System call for TCP message or reception during file transfer has failed. Terminating connection...\n";
-                disconnect();
-                cout << "Closing game app...\n";
-                exit(EXIT_FAILURE);
-            }
-            ifstream file(filename);
-            if (file.is_open()) {
-                cout << file.rdbuf();
-            }
-
-            file.close();
-            cout << "Local copy of the state file saved in file: " + filename + " (";
-            cout << size;
-            cout << " bytes)\n";
-            break;
+    case STATUS_ACT:
+    case STATUS_FIN: {
+        string filename;
+        int size;
+        string prefix = "";
+        string word;
+        rr >> filename;
+        rr >> size;
+        while (rr >> word) {
+            prefix = prefix + word + " ";
         }
-        case STATUS_NOK: {
-            cout << "No games have been played by this player (PLID = " + PLID + ")\n";
-            close(fd);
-            break;
-        }
-        default: {
-            cerr << "ERROR: Wrong Protocol Message Received. Terminating connection...\n";
-            close(fd);
+        prefix.pop_back();
+        int i = TCP_read_to_file(fd, filename, size - MAX_TCP_RESPONSE, prefix);
+        if (i == -1) {
+            cerr << "ERROR: System call for TCP message or reception during file transfer has failed. Terminating connection...\n";
             disconnect();
             cout << "Closing game app...\n";
             exit(EXIT_FAILURE);
-            break;
         }
-    }   
- 
+        ifstream file(filename);
+        if (file.is_open()) {
+            cout << file.rdbuf();
+        }
+
+        file.close();
+        cout << "Local copy of the state file saved in file: " + filename + " (";
+        cout << size;
+        cout << " bytes)\n";
+        break;
+    }
+    case STATUS_NOK: {
+        cout << "No games have been played by this player (PLID = " + PLID + ")\n";
+        close(fd);
+        break;
+    }
+    default: {
+        cerr << "ERROR: Wrong Protocol Message Received. Terminating connection...\n";
+        close(fd);
+        disconnect();
+        cout << "Closing game app...\n";
+        exit(EXIT_FAILURE);
+        break;
+    }
+    }
+
     return;
-
-
 }
-
 
 int main(int argc, char* argv[])
 {
@@ -797,17 +756,17 @@ int main(int argc, char* argv[])
 
         if (command == "start" || command == "sg") {
             start_command(fields[1]);
-        } 
-        
+        }
+
         else if (command == "play" || command == "pl") {
             play_command(fields[1]);
-        } 
-        
+        }
+
         else if (command == "guess" || command == "gw") {
             guess_command(fields[1]);
 
-        } 
-        
+        }
+
         else if (command == "scoreboard" || command == "sb") {
             if (fields[1] != "") {
                 cerr << "ERROR: Argument not required in this command\n";
@@ -837,7 +796,6 @@ int main(int argc, char* argv[])
                 continue;
             }
             state_command();
-
 
         } else if (command == "quit") {
             if (fields[1] != "") {
