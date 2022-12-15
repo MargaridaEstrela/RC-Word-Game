@@ -193,3 +193,18 @@ int get_trials(char* PLID)
     }
     return count - 1;
 }
+
+void add_trial(char* PLID, char* trial)
+{
+    std::ofstream game;
+    char *user_dir, *game_user_dir;
+    user_dir = create_user_dir(PLID);
+    game_user_dir = create_user_game_dir(user_dir, PLID);
+
+    game.open(game_user_dir, std::ios::app);
+
+    if (game.is_open()) {
+        game << trial;
+        game.close();
+    }
+}
