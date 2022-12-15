@@ -24,21 +24,29 @@
 using namespace std;
 
 // GLOBAL VARIABLES
-string GSIP = "127.0.0.1";
-string GSPORT = "58034";
+string GSIP = "127.0.0.1"; // Default server IP (local host)
+string GSPORT = "58034";   // Default Port
 
+// Session and Game state variables
 int n_trials = -1;
 string PLID = "";
 int n_letters;
 char* guessed;
 
+
 // FUNCTIONS
+
+
+/* Function responsible for the decoding of the player
+   application execution command (./player [-n GSIP] [-p GSport]).*/
 void flag_decoder(int argc, char* argv[])
 {
-
+    // No flags used
     if (argc == 1) {
         return;
-    } else if (argc == 3 || argc == 5) {
+    }
+    // Flag handling 
+    else if (argc == 3 || argc == 5) {
         for (int i = 1; i < argc; i += 2) {
             if (string(argv[i]) == "-n") {
                 GSIP = argv[i + 1];
@@ -56,6 +64,14 @@ void flag_decoder(int argc, char* argv[])
     return;
 }
 
+/* Function responsible for reading the data sent through TCP to a file 
+   (commands scoreboard, hint and state)
+   - fd : Socket file descriptor;
+   - filename : name of local file to be written;
+   - byte_size : size of data to be read;
+   - prefix : piece of data read in function TCP_send_receive that is not 
+     part of the status message;
+   - returns 0 in case of success, -1 in failure  */
 int TCP_read_to_file(int fd, string filename, int byte_size, string prefix)
 {
 
@@ -82,13 +98,19 @@ int TCP_read_to_file(int fd, string filename, int byte_size, string prefix)
         }
     }
 
-    data.pop_back();
+    data.pop_back(); // Message sent by server contains extra '\n'
     close(fd);
     file << data;
     file.close();
     return 0;
 }
 
+/* Function responsible for sending requests and
+   receiving responses from the server, through
+   TCP protocol
+   - message : Message to be sent to server;
+   - returns file descriptor for socket and the response
+     (in a unified string) in success, returns ERR_TCP in failure */
 string TCP_send_receive(string message)
 {
     int fd, errcode;
@@ -120,6 +142,7 @@ string TCP_send_receive(string message)
         return ERR_TCP;
     }
 
+    // Sending request to server
     int n_left = message.size();
     n = write(fd, message.c_str(), message.size());
     while (n_left > 0) {
@@ -131,8 +154,9 @@ string TCP_send_receive(string message)
         n_left = n_left - n;
     }
 
+    // Reading the response from server
     string response = "";
-    int n_status_read = MAX_TCP_RESPONSE; // tamanho maximo da resposta (sem a parte dos dados)
+    int n_status_read = MAX_TCP_RESPONSE; // Max status response size (first_word + status + filename + size)
     while (n_status_read > 0) {
         n = read(fd, buffer, n_status_read);
         if (n == -1) {
@@ -154,6 +178,13 @@ string TCP_send_receive(string message)
     return to_string(fd) + " " + response;
 }
 
+
+/* Function responsible for sending requests and
+   receiving responses from the server, through
+   UDP protocol
+   - message : Message to be sent to server;
+   - returns response in success, returns ERR_UDP in failure,
+     returns ERR_LOST in case of timeout (loss of message) */
 string UDP_send_receive(string message)
 {
     int fd, errcode;
@@ -179,6 +210,7 @@ string UDP_send_receive(string message)
         return ERR_UDP;
     }
 
+    // Request sent to server
     n = sendto(fd, message.c_str(), message.size(), 0, res->ai_addr, res->ai_addrlen);
     if (n == -1) {
         close(fd);
@@ -187,6 +219,7 @@ string UDP_send_receive(string message)
 
     addrlen = sizeof(addr);
 
+    // Message reception, designed to declare a possible message loss (timeout)
     fd_set rfds;
     int counter;
     int maxfd;
@@ -194,7 +227,7 @@ string UDP_send_receive(string message)
     FD_SET(fd, &rfds);
     maxfd = fd;
     struct timeval tv;
-    tv.tv_sec = TIME_LIMIT;
+    tv.tv_sec = TIME_LIMIT; // Time limit to declare message loss
     tv.tv_usec = 0;
     counter = select(maxfd + 1, &rfds, (fd_set*)NULL, (fd_set*)NULL, &tv);
     if (counter == -1) {
@@ -228,10 +261,13 @@ string UDP_send_receive(string message)
     return response;
 }
 
-void disconnect()
-{
 
-    cout << "Requesting server for game termination...\n";
+/* Function responsible for requesting the server for
+   game termination, as well as handling the server
+   response. */
+void disconnect() 
+{
+    cout << "Requesting server for game termination...\n"; // Only actually requests server if a game is currently active
     if (n_trials > -1) {
         string word;
         string request = "QUT " + PLID + "\n";
@@ -239,23 +275,27 @@ void disconnect()
         stringstream rr(response);
         rr >> word;
 
+        // First word error handling
         if (word == ERR_UDP) {
             cerr << "ERROR: System call for UDP message or reception has failed while trying to end current game. Terminating app...\n";
             exit(EXIT_FAILURE);
-        } else if (word == ERR_LOST) {
+        } 
+        
+        else if (word == ERR_LOST) {
             while (word == ERR_LOST) {
                 cout << "Because message was lost during disconnect, another request will be automatically sent again\n";
                 response = UDP_send_receive(request);
                 stringstream rr(response);
                 rr >> word;
             }
-
         }
 
         else if (word != "RQT") {
             cerr << "ERROR: Wrong Protocol Message received while trying to end current game. Terminating app...\n";
             exit(EXIT_FAILURE);
         }
+
+        // Status case handling
         rr >> word;
         if (word == "OK") {
             cout << "Ongoing game has been closed\n";
@@ -283,6 +323,13 @@ void disconnect()
     }
 }
 
+
+/* Function responsible for checking for errors
+   in the first word of the response, received
+   from the server and interpreted by the functions above
+   - code : first word of the message received;
+   - protocol : the correct word that should be received for the specific command
+   - returns 0 with success, -1 if an error is detected */
 int error_check(string code, string protocol)
 {
     if (code == ERR_UDP) {
@@ -301,46 +348,53 @@ int error_check(string code, string protocol)
 
     else if (code == ERR_ERR) {
         cerr << "ERROR: Unexpected protocol message received by server. Check command syntax and definition\n";
-        return -1;
+        return -1; // Server returns ERR
     }
 
     else if (code == ERR_LOST) {
-        return -1; // UDP Message Lost
+        return -1; // UDP Message Loss
     }
 
     else if (code != protocol) {
         cerr << "ERROR: Wrong Protocol Message Received. Terminating connection...\n";
         disconnect();
         cout << "Closing game app...\n";
-        exit(EXIT_FAILURE);
+        exit(EXIT_FAILURE); // Unknown response
     }
 
     else {
-        return 0;
+        return 0; // No errors
     }
 }
 
 
+// COMMANDS
 
-void start_command(string ID)
+
+/* Requests server for game start and interprets its response
+   - ID : PLID sent by the user in the command */
+void start_command(string ID) 
 {
-
     if (ID == "") {
         cerr << "ERROR: No PLID was given\n";
         return;
     }
 
+    // If PLID is different from last, automatically disconnects the previous one
     if (PLID != "" && PLID != ID) {
         cout << "Given PLID (" + ID + ") is different from the last PLID used (" + PLID + "). Disconnecting old player...\n";
         disconnect();
+        PLID = "";
     }
 
+    // Sending request and reading response
     string request = "SNG " + ID + "\n";
     string response = UDP_send_receive(request);
     stringstream rr(response);
     string word;
     rr >> word;
 
+    // First word error check
     int err = error_check(word, "RSG");
     if (err == -1) {
         return;
@@ -349,9 +403,11 @@ void start_command(string ID)
     rr >> word;
     string output;
     int status = translate_status(word);
-
+  
+    // Status switch case
     switch (status) {
     case STATUS_OK: {
+        // New game initialization
         PLID = ID;
         string n_misses;
         rr >> n_letters;
@@ -387,9 +443,12 @@ void start_command(string ID)
     return;
 }
 
+
+/* Requests server to accept a letter for the game word 
+   and interprets its response
+   - letter : letter guessed by the player */
 void play_command(string letter)
 {
-
     if (letter == "") {
         cerr << "ERROR: No letter was given\n";
         return;
@@ -400,8 +459,9 @@ void play_command(string letter)
 
     n_trials++;
 
-    transform(letter.begin(), letter.end(), letter.begin(), ::toupper);
+    transform(letter.begin(), letter.end(), letter.begin(), ::toupper); // Setting to uppercase
 
+    // Sending request and reading response
     string request = "PLG " + PLID + " " + letter + " " + to_string(n_trials) + "\n";
     string response = UDP_send_receive(request);
 
@@ -409,6 +469,7 @@ void play_command(string letter)
     string word;
     rr >> word;
 
+    // First word error check
     int i = error_check(word, "RLG");
     if (i == -1) {
         n_trials--;
@@ -420,7 +481,9 @@ void play_command(string letter)
     int status = translate_status(word);
     switch (status) {
 
+    // Status switch case
     case STATUS_OK: {
+        // Update stored word with correct letter guess
         int ocorr;
         rr >> word;
         rr >> ocorr;
@@ -441,6 +504,7 @@ void play_command(string letter)
         break;
     }
     case STATUS_WIN: {
+        // Complete stored word and end current game
         for (int j = 0; j < n_letters; j++) {
             if (guessed[j] == '_') {
                 guessed[j] = letter.at(0);
@@ -462,6 +526,7 @@ void play_command(string letter)
         break;
     }
     case STATUS_OVR: {
+        // End current game
         cout << "GAME OVER! You have reached the max error limit for this word. Play another round?\n";
         n_trials = -1;
         delete[] guessed;
@@ -489,16 +554,19 @@ void play_command(string letter)
     return;
 }
 
+/* Requests server to accept a word to be guessed and 
+   interprets its response
+   - guess : word guessed by the player */
 void guess_command(string guess)
 {
-
     if (guess == "") {
         cerr << "ERROR: No guess word was given\n";
         return;
     }
 
-    transform(guess.begin(), guess.end(), guess.begin(), ::toupper);
+    transform(guess.begin(), guess.end(), guess.begin(), ::toupper); // Setting word to uppercase
 
+    // Sending request and reading response
     n_trials++;
     string request = "PWG " + PLID + " " + guess + " " + to_string(n_trials) + "\n";
     string response = UDP_send_receive(request);
@@ -506,6 +574,7 @@ void guess_command(string guess)
     string word;
     rr >> word;
 
+    // First word error check
     int err = error_check(word, "RWG");
     if (err == -1) {
         n_trials--;
@@ -514,8 +583,11 @@ void guess_command(string guess)
 
     rr >> word;
     int status = translate_status(word);
+
+    // Status switch case
     switch (status) {
     case STATUS_WIN: {
+        //End current game
         cout << "WELL DONE! You guessed: " + guess + "\n";
         n_trials = -1;
         delete[] guessed;
@@ -526,6 +598,7 @@ void guess_command(string guess)
         break;
     }
     case STATUS_OVR: {
+        // End current game
         cout << "GAME OVER! You have reached the max error limit for this word. Play another round?\n";
         n_trials = -1;
         delete[] guessed;
@@ -552,9 +625,10 @@ void guess_command(string guess)
     return;
 }
 
+/* Requests server for the top scores scoreboard and interprets its response */
 void scoreboard_command()
 {
-
+    // Sending request and reading response
     string response = TCP_send_receive("GSB\n");
     stringstream rr(response);
     int fd;
@@ -562,6 +636,7 @@ void scoreboard_command()
     rr >> fd;
     rr >> code;
 
+    // First word error check
     int i = error_check(code, "RSB");
     if (i == -1) {
         return;
@@ -570,8 +645,11 @@ void scoreboard_command()
     string word;
     rr >> word;
     int status = translate_status(word);
+
+    // Status switch case
     switch (status) {
     case STATUS_OK: {
+        // Read the scoreboard and store it in a local file
         string filename;
         int size;
         string prefix;
@@ -612,9 +690,11 @@ void scoreboard_command()
     return;
 }
 
+/* Requests server for a hint image of the current game 
+   and interprets its response */
 void hint_command()
 {
-
+    // Sending request and reading response
     string response = TCP_send_receive("GHL " + PLID + "\n");
     stringstream rr(response);
     int fd;
@@ -622,6 +702,7 @@ void hint_command()
     rr >> fd;
     rr >> code;
 
+    // First word error check
     int err = error_check(code, "RHL");
     if (err == -1) {
         return;
@@ -630,8 +711,11 @@ void hint_command()
     string word;
     rr >> word;
     int status = translate_status(word);
+
+    // Status switch case
     switch (status) {
     case STATUS_OK: {
+        // Read the image data and store it in a local file
         string filename;
         int size;
         string prefix;
@@ -667,9 +751,11 @@ void hint_command()
     return;
 }
 
+/* Requests server for the state of the current or last finished game 
+   and interprets its response */
 void state_command()
 {
-
+    // Sending request and reading response
     string response = TCP_send_receive("STA " + PLID + "\n");
     stringstream rr(response);
     int fd;
@@ -677,8 +763,8 @@ void state_command()
     rr >> fd;
     rr >> code;
 
+    // First word error check
     int err = error_check(code, "RST");
-
     if (err == -1) {
         return;
     }
@@ -686,9 +772,12 @@ void state_command()
     string word;
     rr >> word;
     int status = translate_status(word);
+
+    // Status switch case
     switch (status) {
     case STATUS_ACT:
     case STATUS_FIN: {
+        // Read either current or last finished game state and store it in a local file
         string filename;
         int size;
         string prefix = "";
@@ -698,7 +787,7 @@ void state_command()
         while (rr >> word) {
             prefix = prefix + word + " ";
         }
-        prefix.pop_back();
+        prefix.pop_back(); // extra space
         int i = TCP_read_to_file(fd, filename, size - MAX_TCP_RESPONSE, prefix);
         if (i == -1) {
             cerr << "ERROR: System call for TCP message or reception during file transfer has failed. Terminating connection...\n";
@@ -735,6 +824,8 @@ void state_command()
     return;
 }
 
+/* Infinite loop that reads commands and redirects them to
+   the right function to be handled */
 int main(int argc, char* argv[])
 {
 
@@ -752,6 +843,7 @@ int main(int argc, char* argv[])
         string word;
         stringstream ss(command_line);
 
+        // counter of words in command (max: 2)
         while (ss >> word) {
             if (f_counter > 1) {
                 cerr << "ERROR: Too many command fields. Check the proper command format\n";
@@ -768,6 +860,7 @@ int main(int argc, char* argv[])
 
         command = fields[0];
 
+        // Commands
         if (command == "start" || command == "sg") {
             start_command(fields[1]);
         }
@@ -788,7 +881,9 @@ int main(int argc, char* argv[])
             }
             scoreboard_command();
 
-        } else if (command == "hint" || command == "h") {
+        } 
+        
+        else if (command == "hint" || command == "h") {
             if (PLID == "") {
                 cerr << "ERROR: PLID is currently NULL (no 'start' command has been used)\n";
                 continue;
@@ -799,7 +894,9 @@ int main(int argc, char* argv[])
             }
             hint_command();
 
-        } else if (command == "state" || command == "st") {
+        } 
+        
+        else if (command == "state" || command == "st") {
 
             if (PLID == "") {
                 cerr << "ERROR: PLID is currently NULL (no 'start' command has been used)\n";
@@ -811,14 +908,18 @@ int main(int argc, char* argv[])
             }
             state_command();
 
-        } else if (command == "quit") {
+        } 
+        
+        else if (command == "quit") {
             if (fields[1] != "") {
                 cerr << "ERROR: Argument not required in this command\n";
                 continue;
             }
             disconnect();
 
-        } else if (command == "exit") {
+        } 
+        
+        else if (command == "exit") {
             if (fields[1] != "") {
                 cerr << "ERROR: Argument not required in this command\n";
                 continue;
@@ -826,7 +927,9 @@ int main(int argc, char* argv[])
             disconnect();
             cout << "Exiting player application. Until next time!\n";
             exit(EXIT_SUCCESS);
-        } else {
+        } 
+        
+        else {
             cerr << "ERROR: Command name not known\n";
         }
     }
