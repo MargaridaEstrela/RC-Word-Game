@@ -263,8 +263,13 @@ void disconnect()
             delete[] guessed;
         }
 
-        else if (word == "ERR") {
+        else if (word == "NOK") {
             cout << "No ongoing game has been found\n";
+        }
+
+        else if (word == "ERR"){
+            cerr << "ERROR: Server responded with error while trying to end current game. Terminating app...\n";
+            exit(EXIT_FAILURE);
         }
 
         else {
@@ -365,6 +370,10 @@ void start_command(string ID)
         output = "Game still in progress. Use command 'quit' to end current game";
         break;
     }
+    case STATUS_ERR: {
+        output = "ERROR: The 'start' command was rejected by the server. Syntax or PLID may be invalid";
+        break;
+    }
     default: {
         cerr << "ERROR: Wrong Protocol Message Received. Terminating connection...\n";
         disconnect();
@@ -402,6 +411,7 @@ void play_command(string letter)
 
     int i = error_check(word, "RLG");
     if (i == -1) {
+        n_trials--;
         return;
     }
 
@@ -498,6 +508,7 @@ void guess_command(string guess)
 
     int err = error_check(word, "RWG");
     if (err == -1) {
+        n_trials--;
         return;
     }
 
@@ -640,7 +651,7 @@ void hint_command()
         break;
     }
     case STATUS_NOK: {
-        cout << "The server could not respond to the request. Try again later\n";
+        cout << "The server could not respond to the request. There may be a syntax error or no image available for transfer\n";
         close(fd);
         break;
     }
@@ -707,7 +718,7 @@ void state_command()
         break;
     }
     case STATUS_NOK: {
-        cout << "No games have been played by this player (PLID = " + PLID + ")\n";
+        cout << "No games have been played by this player (PLID = " + PLID + ") or command syntax may be wrong\n";
         close(fd);
         break;
     }
