@@ -24,7 +24,7 @@ int register_user(char* PLID)
         if (check) {
             std::cerr << "Unable to create directory" << std::endl;
             exit(EXIT_FAILURE);
-        }
+        } 
 
         return STATUS_OK;
     }

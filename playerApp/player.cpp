@@ -64,6 +64,7 @@ int TCP_read_to_file(int fd, string filename, int byte_size, string prefix)
 
     ofstream file(filename);
     file << prefix;
+    string data = "";
 
     while (byte_size > 0) {
         n = read(fd, buffer, MAX_TCP_READ);
@@ -77,11 +78,13 @@ int TCP_read_to_file(int fd, string filename, int byte_size, string prefix)
         byte_size = byte_size - n;
 
         for (int i = 0; i < n; i++) {
-            file << buffer[i];
+            data += buffer[i];
         }
     }
 
+    data.pop_back();
     close(fd);
+    file << data;
     file.close();
     return 0;
 }

@@ -1,7 +1,6 @@
 #ifndef AUX_FUNCTIONS
 #define AUX_FUNCTIONS
 
-#include "constants.hpp"
 
 #include <cstring>
 #include <ctype.h>

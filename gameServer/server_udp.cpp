@@ -229,6 +229,11 @@ void process(void)
                 break;
             }
 
+            // string line = "T " + string(arg3) + "\n";
+            // char *trial_line = line;
+
+            // add_trial(PLID, trial_line;
+
         } else if (!strcmp(arg1, "QUT")) {
 
             PLID = arg2;
