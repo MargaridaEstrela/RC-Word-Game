@@ -5,7 +5,7 @@ CXXFLAGS = -g -Wall -Wextra -std=c++11
 .PHONY: all clean run
 CXXSOURCES = ./playerApp/*.cpp ./gameServer/*.cpp aux_functions.cpp aux_functions.hpp constants.hpp
  
-all: player server server_udp
+all: player GS server_udp
 
 
 # PLAYER
@@ -17,8 +17,8 @@ playerApp/player.o: playerApp/player.cpp aux_functions.hpp
 
 
 #SERVER
-server: gameServer/server.o 
-		g++ $(CXXFLAGS) -o server gameServer/server.o
+GS: gameServer/server.o 
+		g++ $(CXXFLAGS) -o GS gameServer/server.o
 
 server_udp: gameServer/server_udp.o aux_functions.o gameServer/data.o 
 		g++ $(CXXFLAGS) -o server_udp gameServer/server_udp.o aux_functions.o gameServer/data.o
@@ -43,4 +43,4 @@ clang-format:
 
 clean: 
 	@echo Cleaning... 
-	rm -f ./*.o playerApp/*.o gameServer/*.o player server server_udp
+	rm -f ./*.o playerApp/*.o gameServer/*.o player GS server_udp

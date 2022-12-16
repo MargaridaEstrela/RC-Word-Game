@@ -19,7 +19,7 @@ using namespace std;
 // GLOBAL VARIABLES
 string GSPORT = "58034";
 bool verbose = false;
-string word;
+char* word;
 
 pid_t udp_pid;
 pid_t tcp_pid;
@@ -31,10 +31,11 @@ void decoder(int argc, char* argv[])
 {
 
     if (argc == 2) {
+        word = new char[sizeof(argv[1])];
         word = argv[1];
         return;
-    } else if (argc == 3 || argc == 5) {
-        for (int i = 1; i < argc; i += 2) {
+    } else if (argc >= 3 & argc <= 5) {
+        for (int i = 2; i < argc; i += 2) {
             if (string(argv[i]) == "-p") {
                 GSPORT = argv[i + 1];
             } else if (string(argv[i]) == "-v") {
@@ -59,8 +60,7 @@ int main(int argc, char* argv[])
     udp_pid = fork();
 
     if (udp_pid == 0) {
-        // TO VERIFY
-        execl("./server_udp", "./server_udp", word.c_str(), GSPORT.c_str(), verbose);
+        execl("./server_udp", "./server_udp", word, GSPORT.c_str(), verbose, NULL);
         cerr << "ERROR: cannot execute UDP server\n";
         exit(EXIT_FAILURE);
     } else if (udp_pid == -1) {

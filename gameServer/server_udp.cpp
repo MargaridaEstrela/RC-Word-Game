@@ -19,6 +19,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <fstream>
 
 using string = std::string;
 
@@ -91,7 +92,7 @@ int check_letter(char* letter)
             n++;
     }
 
-    if (n == 0 && trials < errors) {
+    if (n == 0 & trials < errors) {
         return STATUS_NOK;
     } else if (n == 0) {
         return STATUS_OVR;
@@ -105,7 +106,7 @@ int check_word(char* guess_word)
 {
     char* last_guess_word = get_last_guess_word(PLID);
 
-    if (!strcmp(guess_word, last_guess_word)) { 
+    if (!strcmp(guess_word, last_guess_word)) {
         return STATUS_WIN;
     } else if (get_trials(PLID) < errors) {
         return STATUS_NOK;
@@ -116,6 +117,8 @@ int check_word(char* guess_word)
 
 void process(void)
 {
+    std::cout << "start process" << std::endl;
+
     char request[MAX_COMMAND_LINE];
     string response;
 
@@ -127,8 +130,8 @@ void process(void)
 
         printf("message received\n");
         int i = ntohs(addr.sin_port);
-        char *ip = inet_ntoa(addr.sin_addr);
-        printf("Port: %d | IP: %s\n",i,ip);
+        char* ip = inet_ntoa(addr.sin_addr);
+        printf("Port: %d | IP: %s\n", i, ip);
 
         if (n < 0) {
             perror("recvfrom failed");
@@ -149,15 +152,9 @@ void process(void)
 
         if (!strcmp(arg1, "SNG")) {
 
-            if (strlen(arg2) != 6) {
-                std::cerr << "PLID: bad format. PLID is always sent using 6 digits."
-                          << std::endl;
-                exit(EXIT_FAILURE);
-                // Aqui não pode ser exit, tens de mandar uma resposta ao cliente ("RSG ERR")
-                // Por mim tiravamos isto e ficavamos so com o register user que trata disto tambem
-            }
-
             PLID = arg2;
+
+            std::cout << "start command" << std::endl;
 
             int status = register_user(arg2);
 
@@ -172,20 +169,19 @@ void process(void)
             }
         } else if (!strcmp(arg1, "PLG")) {
 
-            if (sizeof(PLID) == 0) {
+            if (!check_PLID(PLID)) {
                 response = "RLG ERR\n";
             }
 
-            if (trials != atoi(arg4)) {
+            if (trials != atoi(arg4) || trials != get_trials(PLID)) {
                 response = "RLG INV " + (string)arg4 + "\n";
             }
 
-            last_guess_letter = arg3;
-            status = check_letter(last_guess_letter);
+            status = check_letter(arg3);
 
             switch (status) {
             case STATUS_OK:
-                response = "RLG OK " + (string)last_guess_letter + " " + std::to_string(n) + "\n";
+                response = "RLG OK " + (string)arg3 + " " + std::to_string(n) + "\n";
                 break;
             case STATUS_WIN:
                 response = "RLG WIN " + (string)arg4 + "\n";
@@ -201,6 +197,10 @@ void process(void)
                 response = "RLG OVR\n";
                 break;
             }
+
+            char *trial_line = (char*)calloc(strlen(arg3) + 3, sizeof(char));
+            sprintf(trial_line, "T %s\n", arg3);
+            add_trial(PLID, trial_line);
 
         } else if (!strcmp(arg1, "PWG")) {
 
@@ -234,10 +234,9 @@ void process(void)
                 break;
             }
 
-            // string line = "T " + string(arg3) + "\n";
-            // char *trial_line = line;
-
-            // add_trial(PLID, trial_line;
+            char *trial_line = (char*)calloc(strlen(arg3) + 3, sizeof(char));
+            sprintf(trial_line, "T %s\n", arg3);
+            add_trial(PLID, trial_line);
 
         } else if (!strcmp(arg1, "QUT")) {
 
@@ -271,6 +270,7 @@ void process(void)
         }
 
         // SEND RESPONSE
+        std::cout << response << std::endl;
         n = sendto(fd, response.c_str(), strlen(response.c_str()) * sizeof(char), 0,
             (struct sockaddr*)&addr, addrlen);
         if (n < 0) {

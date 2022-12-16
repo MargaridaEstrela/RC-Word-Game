@@ -1,7 +1,6 @@
 #ifndef AUX_FUNCTIONS
 #define AUX_FUNCTIONS
 
-
 #include <cstring>
 #include <ctype.h>
 #include <errno.h>
