@@ -21,22 +21,26 @@ int register_user(char* PLID)
     user_dir = create_user_dir(PLID);
 
     if (!user_exists(user_dir)) {
-        check = mkdir(user_dir, 0777);
+        check = mkdir(user_dir,0777);
 
-        if (check) {
+        if (check == -1) {
             std::cerr << "Unable to create directory" << std::endl;
             exit(EXIT_FAILURE);
         }
 
+        game_user_dir = create_user_game_dir(PLID);
+        std::ofstream new_game (game_user_dir);
+        new_game.close();
+
         return STATUS_OK;
     }
 
-    game_user_dir = create_user_game_dir(user_dir, PLID);
+    game_user_dir = create_user_game_dir(PLID);
 
-    if (check_ongoing_game(game_user_dir)) { // Estás a ter o pensamento errado aqui. Tu queres dar OK se nenhum jogo estiver ativo
-        game.open(game_user_dir); // e NOK se estiver (ou seja, está ao contrário)
-                                  // No entanto, um jogo sem jogadas nenhumas também conta como um mensagem OK, por isso
-        if (game.is_open()) { // temos de verificar isso
+    if (check_ongoing_game(game_user_dir)) { 
+        game.open(game_user_dir); 
+                                  
+        if (game.is_open()) { 
             int count = 0;
             string line;
             string word;
@@ -53,8 +57,8 @@ int register_user(char* PLID)
                 count++;
             }
 
-            if (count - 1 < max_trials) {
-                return STATUS_OK;
+            if (count > 1) {
+                return STATUS_NOK;
             }
         }
     }
@@ -62,8 +66,8 @@ int register_user(char* PLID)
     return STATUS_OK;
 }
 
-bool user_exists(char* path) // Penso que esta função não funciona, acho que o opendir não deteta diretorias existentes
-{ // Estou a dizer isto porque esta função dá verdadeiro mesmo usando PLID's novos
+bool user_exists(char* path) 
+{ 
     struct stat user_dir;
 
     int stat_user_dir = stat(path, &user_dir);
@@ -76,16 +80,18 @@ bool user_exists(char* path) // Penso que esta função não funciona, acho que 
 
 bool check_ongoing_game(char* path)
 {
-    DIR* game_dir;
-    game_dir = opendir(path);
-
-    if (!game_dir) {
-        free(game_dir);
+    FILE* game;
+    game = fopen(path,"r");
+    if (game == NULL){
         return false;
     }
+    else{
+        fclose(game);
+        return true;
+    }
 
-    return true;
 }
+
 
 char* create_user_dir(char* PLID)
 {
@@ -98,11 +104,11 @@ char* create_user_dir(char* PLID)
     return user_dir;
 }
 
-char* create_user_game_dir(char* user_dir, char* PLID)
+char* create_user_game_dir(char* PLID)
 {
     char* user_game_dir = (char*)calloc(strlen(USER_OG_GAME_DIR), sizeof(char));
 
-    sprintf(user_game_dir, "%s/GAME_%s.txt", user_dir, PLID);
+    sprintf(user_game_dir, "%s/GAME_%s.txt",GAMES_DIR, PLID);
 
     return user_game_dir;
 }
@@ -112,9 +118,11 @@ char* get_last_guess_letter(char* PLID)
     std::ifstream game;
     char *user_dir, *game_user_dir;
     user_dir = create_user_dir(PLID);
-    game_user_dir = create_user_game_dir(user_dir, PLID);
-    char* code = nullptr;
-    char* letter = nullptr;
+    game_user_dir = create_user_game_dir(PLID);
+    //char* code = nullptr;
+    //char* letter = nullptr;
+    char* code;
+    char* letter;
 
     game.open(game_user_dir);
 
@@ -122,8 +130,7 @@ char* get_last_guess_letter(char* PLID)
         string line;
         int count = 0;
 
-        while (game) {
-            std::getline(game, line);
+        while (std::getline(game,line)) {
 
             if (count == 0) {
                 continue;
@@ -131,7 +138,6 @@ char* get_last_guess_letter(char* PLID)
 
             std::stringstream stream_line(line);
             stream_line >> code;
-
             if (!strcmp(code, "T")) {
                 stream_line >> letter;
             }
@@ -146,7 +152,7 @@ char* get_last_guess_word(char* PLID)
     std::ifstream game;
     char *user_dir, *game_user_dir;
     user_dir = create_user_dir(PLID);
-    game_user_dir = create_user_game_dir(user_dir, PLID);
+    game_user_dir = create_user_game_dir(PLID);
     char* code = nullptr;
     char* word = nullptr;
 
@@ -179,7 +185,7 @@ int get_trials(char* PLID)
     std::ifstream game;
     char *user_dir, *game_user_dir;
     user_dir = create_user_dir(PLID);
-    game_user_dir = create_user_game_dir(user_dir, PLID);
+    game_user_dir = create_user_game_dir(PLID);
 
     game.open(game_user_dir);
     int count = 0;
@@ -200,7 +206,7 @@ void add_trial(char* PLID, char* trial)
     std::ofstream game;
     char *user_dir, *game_user_dir;
     user_dir = create_user_dir(PLID);
-    game_user_dir = create_user_game_dir(user_dir, PLID);
+    game_user_dir = create_user_game_dir(PLID);
 
     game.open(game_user_dir, std::ios::app);
 

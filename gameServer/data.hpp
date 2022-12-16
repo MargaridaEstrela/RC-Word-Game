@@ -21,12 +21,12 @@
 
 
 // DIRECTORIES
-#define GAMES_DIR "../GAMES"
-#define SCORES_DIR "../SCORES"
+#define GAMES_DIR "GAMES"
+#define SCORES_DIR "SCORES"
 
 // USER PATH
-#define USER_DIR "../GAMES/xxxxxx"
-#define USER_OG_GAME_DIR "../GAMES/GAME_xxxxxx.txt" //on_going games
+#define USER_DIR "GAMES/xxxxxx"
+#define USER_OG_GAME_DIR "GAMES/GAME_xxxxxx.txt" //on_going games
 
 // FILE EXTENSION
 #define HINT_FILE_EXTENSION "_hint.txt"
@@ -41,7 +41,7 @@ bool user_exists(char *path);
 bool check_ongoing_game(char *path);
 
 char* create_user_dir(char *PLID);
-char* create_user_game_dir(char *user_dir, char *PLID);
+char* create_user_game_dir(char *PLID);
 
 char* get_last_guess_letter(char *PLID);
 char* get_last_guess_word(char *PLID);

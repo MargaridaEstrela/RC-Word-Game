@@ -1,3 +1,5 @@
+#include "data.hpp"
+
 #include <arpa/inet.h>
 #include <cstring>
 #include <ctype.h>
@@ -56,6 +58,8 @@ int main(int argc, char* argv[])
 {
 
     decoder(argc, argv);
+    mkdir(GAMES_DIR,0777);
+    mkdir(SCORES_DIR,0777);
 
     udp_pid = fork();
 

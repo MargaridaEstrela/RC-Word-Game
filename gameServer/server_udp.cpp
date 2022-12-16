@@ -148,10 +148,10 @@ void process(void)
         char* arg3 = new char[MAX_COMMAND_LINE];
         char* arg4 = new char[MAX_COMMAND_LINE];
 
-        sscanf(request, "%s %s %s %s", arg1, arg2, arg3, arg4);
+        sscanf(request, "%s %s %s %s %s", arg1, arg2, arg3, arg4);
 
         if (!strcmp(arg1, "SNG")) {
-            
+
             strcpy(PLID,arg2);
             std::cout << "start command" << std::endl;
 
@@ -200,16 +200,17 @@ void process(void)
                 break;
             }
 
-            char *trial_line = (char*)calloc(strlen(arg3) + 3, sizeof(char));
+            char *trial_line = (char*)calloc(strlen(arg3)+3, sizeof(char));
             sprintf(trial_line, "T %s\n", arg3);
             add_trial(PLID, trial_line);
+            std::cout << "PLAY COPLETADO";
 
         } else if (!strcmp(arg1, "PWG")) {
 
             PLID = arg2;
 
             char* user_dir = create_user_dir(PLID);
-            char* user_game_dir = create_user_game_dir(user_dir, PLID);
+            char* user_game_dir = create_user_game_dir(PLID);
 
             if (arg2 != PLID || check_ongoing_game(user_game_dir)) {
                 response = "RWG ERR\n";
@@ -249,7 +250,7 @@ void process(void)
                 response = "RQT ERR\n";
             }
 
-            char* user_game_dir = create_user_game_dir(user_dir, PLID);
+            char* user_game_dir = create_user_game_dir(PLID);
 
             if (check_ongoing_game(user_game_dir)) {
                 response = "RQT OK\n";
@@ -261,7 +262,7 @@ void process(void)
             PLID = arg2;
 
             char* user_dir = create_user_dir(PLID);
-            char* user_game_dir = create_user_game_dir(user_dir, PLID);
+            char* user_game_dir = create_user_game_dir(PLID);
 
             if (check_ongoing_game(user_game_dir)) {
                 response = "RRV " + (string)word + "\n";
@@ -297,12 +298,13 @@ int main(int argc, char* argv[])
         std::cerr << "ERROR_UDP: bad input" << std::endl;
     }
 
-    word = new char[sizeof(argv[1])];
+    word = new char[strlen(argv[1])];
     PLID = new char[PLID_SIZE];
 
     word = argv[1];
-    word_size = sizeof(argv[1]);
-
+    word_size = strlen(argv[1]);  // Isto esta errado, esse argumento é o ficheiro que tem as palavras de onde vamos escolher
+    std::cout << word;            // A escolha da palavra vem depois (só estou a deixar para me ajudar nos testes por enquanto)
+                                // Já agora, nunca uses sizeof(), usa sempre strlen, please, isso deu-me muita dor de cabeça xD
     errors = max_errors(word_size);
     GSPORT = argv[2];
     verbose = argv[3];
