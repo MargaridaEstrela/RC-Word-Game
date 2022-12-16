@@ -4,7 +4,7 @@
 bool check_PLID(char* PLID)
 {
 
-    if (sizeof(PLID) != 6) {
+    if (strlen(PLID) != 6) {
         return false;
     }
 

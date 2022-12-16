@@ -128,7 +128,7 @@ void process(void)
         n = recvfrom(fd, request, MAX_COMMAND_LINE, 0, (struct sockaddr*)&addr,
             &addrlen);
 
-        printf("message received\n");
+        printf("Message received: ");
         int i = ntohs(addr.sin_port);
         char* ip = inet_ntoa(addr.sin_addr);
         printf("Port: %d | IP: %s\n", i, ip);
@@ -151,9 +151,8 @@ void process(void)
         sscanf(request, "%s %s %s %s", arg1, arg2, arg3, arg4);
 
         if (!strcmp(arg1, "SNG")) {
-
-            PLID = arg2;
-
+            
+            strcpy(PLID,arg2);
             std::cout << "start command" << std::endl;
 
             int status = register_user(arg2);
@@ -165,6 +164,9 @@ void process(void)
             case STATUS_NOK:
                 trials = get_trials(PLID);
                 response = "RSG NOK\n";
+                break;
+            case STATUS_ERR:
+                response = "RSG ERR\n";
                 break;
             }
         } else if (!strcmp(arg1, "PLG")) {

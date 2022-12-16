@@ -11,9 +11,7 @@
 int register_user(char* PLID)
 {
     if (!check_PLID(PLID)) {
-        return STATUS_ERR; // Aqui não pode ser STATUS_NOK, isso vai entrar em conflito com o STATUS_NOK do comando start
-                           // Para além disso esta função faz o mesmo do que o que está no inicio do comando start, por isso
-                           // podemos tirar essa parte de lá e ficamos só com esta (e esta retorna STATUS_ERR)
+        return STATUS_ERR; 
     }
 
     std::ifstream game;
