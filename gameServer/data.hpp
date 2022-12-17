@@ -20,9 +20,10 @@
 #include <string>
 
 
-// DIRECTORIES
+// DIRECTORIES AND FILES
 #define GAMES_DIR "GAMES"
 #define SCORES_DIR "SCORES"
+#define WORD_FILE "word_eng.txt"
 
 // USER PATH
 #define USER_DIR "GAMES/xxxxxx"

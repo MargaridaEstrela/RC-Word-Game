@@ -28,8 +28,27 @@ int register_user(char* PLID)
             exit(EXIT_FAILURE);
         }
 
+        srand(time(0));
+        int index = rand() % WORD_COUNT;
+        string line,word;
+        string blanks = "";
+        int size;
         game_user_dir = create_user_game_dir(PLID);
         std::ofstream new_game (game_user_dir);
+        std::ifstream word_file(WORD_FILE);
+        for (int i = 0; i < index ; i++){
+            std::getline(word_file,line);
+        }
+        word_file.close();
+        std::stringstream ss(line);
+        ss >> word;
+        size = word.length();
+        for (int i = 0; i < size; i++){
+            blanks += " _";
+        }
+        new_game << line;
+        new_game << blanks;
+        new_game << "\n";
         new_game.close();
 
         return STATUS_OK;
@@ -38,29 +57,7 @@ int register_user(char* PLID)
     game_user_dir = create_user_game_dir(PLID);
 
     if (check_ongoing_game(game_user_dir)) { 
-        game.open(game_user_dir); 
-                                  
-        if (game.is_open()) { 
-            int count = 0;
-            string line;
-            string word;
-            int max_trials = 0;
-
-            while (game) {
-                std::getline(game, line);
-
-                if (count == 0) {
-                    std::stringstream stream_line(line);
-                    stream_line >> word;
-                    max_trials = max_errors(word.size());
-                }
-                count++;
-            }
-
-            if (count > 1) {
-                return STATUS_NOK;
-            }
-        }
+        return STATUS_NOK;
     }
 
     return STATUS_OK;
@@ -198,7 +195,7 @@ int get_trials(char* PLID)
             count++;
         }
     }
-    return count - 1;
+    return count;
 }
 
 void add_trial(char* PLID, char* trial)
