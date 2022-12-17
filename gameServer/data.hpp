@@ -48,6 +48,6 @@ char* get_last_guess_letter(char *PLID);
 char* get_last_guess_word(char *PLID);
 int get_trials(char *PLID);
 
-void add_trial(char* PLID, char* line);
+void add_trial(char* PLID, char* line, char* code);
 
 #endif //!DATA

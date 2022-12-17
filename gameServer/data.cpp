@@ -8,6 +8,28 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+void create_game_file(char* PLID){
+
+    srand(time(0));
+    int index = rand() % WORD_COUNT;
+    string line;
+    char *game_user_dir = create_user_game_dir(PLID);
+    std::ofstream new_game (game_user_dir);
+    std::ifstream word_file(WORD_FILE);
+    for (int i = 0; i < index ; i++){
+        std::getline(word_file,line);
+    }
+    word_file.close();
+    new_game << line;
+    new_game << "\n";
+    new_game.close();
+
+}
+
+
+
+
+
 int register_user(char* PLID)
 {
     if (!check_PLID(PLID)) {
@@ -28,38 +50,18 @@ int register_user(char* PLID)
             exit(EXIT_FAILURE);
         }
 
-        srand(time(0));
-        int index = rand() % WORD_COUNT;
-        string line,word;
-        string blanks = "";
-        int size;
-        game_user_dir = create_user_game_dir(PLID);
-        std::ofstream new_game (game_user_dir);
-        std::ifstream word_file(WORD_FILE);
-        for (int i = 0; i < index ; i++){
-            std::getline(word_file,line);
-        }
-        word_file.close();
-        std::stringstream ss(line);
-        ss >> word;
-        size = word.length();
-        for (int i = 0; i < size; i++){
-            blanks += " _";
-        }
-        new_game << line;
-        new_game << blanks;
-        new_game << "\n";
-        new_game.close();
-
+        create_game_file(PLID);
         return STATUS_OK;
     }
 
     game_user_dir = create_user_game_dir(PLID);
 
     if (check_ongoing_game(game_user_dir)) { 
+        free(game_user_dir);
         return STATUS_NOK;
     }
 
+    create_game_file(PLID);
     return STATUS_OK;
 }
 
@@ -103,7 +105,7 @@ char* create_user_dir(char* PLID)
 
 char* create_user_game_dir(char* PLID)
 {
-    char* user_game_dir = (char*)calloc(strlen(USER_OG_GAME_DIR), sizeof(char));
+    char* user_game_dir = (char*)calloc(/*strlen(USER_OG_GAME_DIR)+*/30, sizeof(char));
 
     sprintf(user_game_dir, "%s/GAME_%s.txt",GAMES_DIR, PLID);
 
@@ -180,8 +182,7 @@ char* get_last_guess_word(char* PLID)
 int get_trials(char* PLID)
 {
     std::ifstream game;
-    char *user_dir, *game_user_dir;
-    user_dir = create_user_dir(PLID);
+    char* game_user_dir;
     game_user_dir = create_user_game_dir(PLID);
 
     game.open(game_user_dir);
@@ -195,10 +196,10 @@ int get_trials(char* PLID)
             count++;
         }
     }
-    return count;
+    return count - 1;
 }
 
-void add_trial(char* PLID, char* trial)
+void add_trial(char* PLID, char* trial, char* code)
 {
     std::ofstream game;
     char *user_dir, *game_user_dir;
@@ -209,6 +210,8 @@ void add_trial(char* PLID, char* trial)
 
     if (game.is_open()) {
         game << trial;
+        game << code;
+        game << "\n";
         game.close();
     }
 }
