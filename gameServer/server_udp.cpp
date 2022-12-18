@@ -112,7 +112,7 @@ int get_errors(char* PLID){
         while (std::getline(game,line)) {
             std::stringstream stream_line(line);
             stream_line >> code;
-            if (code == "T") {
+            if (code == "T" || code == "G") {
                 stream_line >> code;
                 stream_line >> state;
                 if (state == "NOK"){
@@ -239,8 +239,6 @@ int check_completion(char* PLID,char* play){
 }
 
 
-
-
 int check_letter(char* PLID, char* letter)
 {
     int n = 0;
@@ -252,7 +250,6 @@ int check_letter(char* PLID, char* letter)
         }
     }
 
-    int trials = get_trials(PLID);
     int max_err = max_errors(size);
     int errors = get_errors(PLID);
     if (n == 0 & errors < max_err) {
@@ -269,6 +266,80 @@ int check_letter(char* PLID, char* letter)
     }
 
 }
+
+int check_word(char* PLID, char* guess){
+    int n;
+    char* word = get_player_word(PLID);
+    int size = strlen(word);
+    if (!strcmp(word,guess)){
+        n = 1;
+    }
+    else {
+        n = 0;
+    }
+
+    int max_err = max_errors(size);
+    int errors = get_errors(PLID);
+    if (n == 0 & errors < max_err) {
+        return STATUS_NOK;
+    } else if (n == 0) {
+        return STATUS_OVR;
+    } else if (n > 0) {
+        return STATUS_WIN;
+    }
+}
+
+int check_last_played(char* PLID,char* guess,char* code){
+    char* game_user_dir = create_user_game_dir(PLID);
+    string word;
+    char* last_w = new char[MAX_WORD_SIZE];
+    char check = 'T';
+    std::ifstream game;
+
+    game.open(game_user_dir);
+
+    if (game.is_open()) {
+        string line;
+
+        while (check == 'T' || check == 'G') {
+            std::getline(game,line);
+            std::stringstream ss(line);
+            ss >> check;
+            ss >> last_w;
+            ss >> word;
+        }
+        game.close();
+        if (!strcmp(code,"T")){
+            if (last_w[0] == guess[0]){
+                if (word == "OK"){
+                    return 1;
+                }
+                else {
+                    return 2;
+                }
+            }
+            else {
+                return 0;
+            }
+        }
+        else{
+            if (!strcmp(guess,last_w)){
+                if (word == "OK"){
+                    return 1;
+                }
+                else {
+                    return 2;
+                }
+            }
+            else {
+                return 0;
+            }
+        }
+    }
+    return -1;
+}
+
+
 
 
 int check_play_status(char* PLID, char* letter, int trials){
@@ -288,6 +359,19 @@ int check_play_status(char* PLID, char* letter, int trials){
         return STATUS_INV;
     }
 
+}
+
+int check_guess_status(char* PLID,char* guess, int trials){
+    char* user_game_dir = create_user_game_dir(PLID);
+    if (!check_PLID(PLID) || !check_ongoing_game(user_game_dir)) {
+        return STATUS_ERR;
+    }
+    else if(trials == get_trials(PLID)){
+        return check_word(PLID,guess);
+    }
+    else{
+        return STATUS_INV;
+    }
 }
 
 
@@ -433,36 +517,83 @@ void process(void)
                 end_current_game(arg2,"FAIL");
                 break;
             }
+            case STATUS_INV: {
+                int last = check_last_played(arg2,arg3,"T");
+                if (last == 0){
+                    response = "RLG INV " + std::to_string(trial) + "\n";
+                }
+                else if (last == 1) {
+                    string pos = get_letter_positions(arg2,arg3);
+                    response = "RLG OK " + string(arg4) + " " + pos + "\n";
+                }
+                else if (last == 2) {
+                    response = "RLG NOK\n";
+                }
+                break;
+            }
             case STATUS_ERR:
                 response = "RLG ERR\n";
             }
 
-        } /*else if (!strcmp(arg1, "PWG")) {
+        } else if (!strcmp(arg1, "PWG")) {
 
-            char* user_game_dir = create_user_game_dir(arg2);
-            if (arg2 != PLID || check_ongoing_game(user_game_dir)) {
-                response = "RWG ERR\n";
+            int size = strlen(arg3);
+            for (int i = 0; i < size; i++){
+                arg3[i] = tolower(arg3[i]);
             }
 
-            status = check_guess_state(arg3);
+            status = check_guess_status(arg2,arg3,atoi(arg4));
+            int trial = get_trials(arg2);
 
             switch (status) {
-            case STATUS_WIN:
-                response = "RWG WIN " + std::to_string(trials) + "\n";
+            case STATUS_WIN:{
+                response = "RWG WIN " + (string)arg4 + "\n";
+                char *trial_line = (char*)calloc(strlen(arg3)+3, sizeof(char));
+                sprintf(trial_line, "G %s ", arg3);
+                add_trial(arg2, trial_line, "OK");
+                end_current_game(arg2,"WIN");
                 break;
-            case STATUS_NOK:
-                response = "RWG WIN " + std::to_string(trials) + "\n";
+            }
+            case STATUS_NOK:{
+                response = "RWG NOK " + (string)arg4 + "\n";
+                char *trial_line = (char*)calloc(strlen(arg3)+3, sizeof(char));
+                sprintf(trial_line, "G %s ", arg3);
+                add_trial(arg2, trial_line, "NOK");
                 break;
-            case STATUS_OVR:
-                response = "RWG OVR " + std::to_string(trials) + "\n";
+            }
+            case STATUS_OVR:{
+                response = "RWG OVR " + (string)arg4 + "\n";
+                char *trial_line = (char*)calloc(strlen(arg3)+3, sizeof(char));
+                sprintf(trial_line, "G %s ", arg3);
+                add_trial(arg2, trial_line, "NOK");
+                end_current_game(arg2,"FAIL");
+                break;
+            }
+            case STATUS_INV:{
+                int last = check_last_played(arg2,arg3,"G");
+                if (last == 0){
+                    response = "RLG INV " + std::to_string(trial) + "\n";
+                }
+                else if (last == 1) {
+                    char *trial_line = (char*)calloc(strlen(arg3)+3, sizeof(char));
+                    sprintf(trial_line, "G %s ", arg3);
+                    add_trial(arg2, trial_line, "OK");
+                    end_current_game(arg2,"WIN");
+                }
+                else if (last == 2) {
+                    response = "RWG NOK " + (string)arg4 + "\n";
+                    char *trial_line = (char*)calloc(strlen(arg3)+3, sizeof(char));
+                    sprintf(trial_line, "G %s ", arg3);
+                    add_trial(arg2, trial_line, "NOK");
+                }
+                break;
+            }
+            case STATUS_ERR:
+                response = "RWG ERR\n";
                 break;
             }
 
-            char *trial_line = (char*)calloc(strlen(arg3) + 3, sizeof(char));
-            sprintf(trial_line, "T %s\n", arg3);
-            add_trial(PLID, trial_line);
-
-        }*/ else if (!strcmp(arg1, "QUT")) {
+        } else if (!strcmp(arg1, "QUT")) {
 
             char* user_dir = create_user_dir(arg2);
 
@@ -478,21 +609,7 @@ void process(void)
             } else {
                 response = "RQT NOK\n";
             }
-        } /*else if (!strcmp(arg1, "REV")) {
-
-            char* PLID = arg2;
-
-            char* user_dir = create_user_dir(PLID);
-            char* user_game_dir = create_user_game_dir(PLID);
-
-            if (check_ongoing_game(user_game_dir)) {
-                response = "RRV " + (string)word + "\n";
-            }
-        } else {
-            std::cerr << "ERROR_UDP: invalid command." << std::endl;
-            exit(EXIT_FAILURE);
-        }*/
-
+        } 
         // SEND RESPONSE
         std::cout << response << std::endl;
         n = sendto(fd, response.c_str(), strlen(response.c_str()) * sizeof(char), 0,
