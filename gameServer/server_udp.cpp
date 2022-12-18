@@ -344,6 +344,18 @@ int check_last_played(char* PLID,char* guess,char* code){
 
 int check_play_status(char* PLID, char* letter, int trials){
     char* game_user_dir = create_user_game_dir(PLID);
+
+    int size = strlen(letter);
+    if (size > 1){
+        return STATUS_ERR;
+    }
+    for (int i = 0; i < size; i++){
+        if (isalpha(letter[i]) == 0){
+            return STATUS_ERR;
+        }
+        letter[i] = tolower(letter[i]);
+    }
+
     if (!check_PLID(PLID) || !check_ongoing_game(game_user_dir)) {
         return STATUS_ERR;
     }
@@ -363,6 +375,17 @@ int check_play_status(char* PLID, char* letter, int trials){
 
 int check_guess_status(char* PLID,char* guess, int trials){
     char* user_game_dir = create_user_game_dir(PLID);
+    int size = strlen(guess);
+    if (size < 3 || size > 30){
+        return STATUS_ERR;
+    }
+    for (int i = 0; i < size; i++){
+        if (isalpha(guess[i]) == 0){
+            return STATUS_ERR;
+        }
+        guess[i] = tolower(guess[i]);
+    }
+
     if (!check_PLID(PLID) || !check_ongoing_game(user_game_dir)) {
         return STATUS_ERR;
     }
@@ -486,6 +509,7 @@ void process(void)
 
     char request[MAX_COMMAND_LINE];
     string response;
+    string verb_response;
 
     while (1) {
 
@@ -493,20 +517,12 @@ void process(void)
         n = recvfrom(fd, request, MAX_COMMAND_LINE, 0, (struct sockaddr*)&addr,
             &addrlen);
 
-        printf("Message received: ");
-        int i = ntohs(addr.sin_port);
-        char* ip = inet_ntoa(addr.sin_addr);
-        printf("Port: %d | IP: %s\n", i, ip);
-
         if (n < 0) {
             perror("recvfrom failed");
             exit(EXIT_FAILURE);
         }
 
         request[n] = '\0';
-        if (verbose) {
-            // TO DO
-        }
 
         char* arg1 = new char[MAX_COMMAND_LINE];
         char* arg2 = new char[MAX_COMMAND_LINE];
@@ -518,7 +534,9 @@ void process(void)
 
         if (!strcmp(arg1, "SNG")) {
 
-            std::cout << "start command" << std::endl;
+            verb_response = "PLID = ";
+            verb_response += (string)arg2; + ": ";
+            verb_response = "Start new game: ";
 
             int status = register_user(arg2);
             int word_size = get_word_size(arg2);
@@ -538,15 +556,12 @@ void process(void)
                 }
                 break;
             case STATUS_ERR:
+                verb_response += "Error (PLID may be invalid)\n";
                 response = "RSG ERR\n";
                 break;
             }
         } else if (!strcmp(arg1, "PLG")) {
-            
-            int size = strlen(arg3);
-            for (int i = 0; i < size; i++){
-                arg3[i] = tolower(arg3[i]);
-            }
+
             status = check_play_status(arg2,arg3,atoi(arg4));
             int trial = get_trials(arg2);
 
@@ -604,11 +619,6 @@ void process(void)
             }
 
         } else if (!strcmp(arg1, "PWG")) {
-
-            int size = strlen(arg3);
-            for (int i = 0; i < size; i++){
-                arg3[i] = tolower(arg3[i]);
-            }
 
             status = check_guess_status(arg2,arg3,atoi(arg4));
             int trial = get_trials(arg2);
@@ -678,8 +688,17 @@ void process(void)
                 response = "RQT NOK\n";
             }
         } 
+        else {
+            response = "ERR\n";
+        }
         // SEND RESPONSE
-        std::cout << response << std::endl;
+        if (verbose){
+            printf("Message received: ");
+            int i = ntohs(addr.sin_port);
+            char* ip = inet_ntoa(addr.sin_addr);
+            printf("Port: %d | IP: %s\n", i, ip);
+            std::cout << verb_response;
+        }
         n = sendto(fd, response.c_str(), strlen(response.c_str()) * sizeof(char), 0,
             (struct sockaddr*)&addr, addrlen);
         if (n < 0) {
