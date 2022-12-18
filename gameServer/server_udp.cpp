@@ -374,6 +374,71 @@ int check_guess_status(char* PLID,char* guess, int trials){
     }
 }
 
+char* get_score_filename(char* PLID, int score){
+    time_t rawtime;
+    tm* timeinfo;
+    char* buffer = new char[80];
+    char* filename = new char[80];
+
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+
+    strftime(buffer,80,"%d%m%Y_%H%M%S",timeinfo);
+    sprintf(filename,"SCORES/%d_%s_",score,PLID);
+    strcat(filename,buffer);
+    strcat(filename,".txt");
+    
+    return filename;
+
+}
+
+
+
+
+int create_score_file(char* PLID){
+    char* game_user_dir = create_user_game_dir(PLID);
+    std::ifstream game;
+    game.open(game_user_dir);
+    if (game.is_open()){
+    char* filename;
+    char* word; 
+    string line,code,state;
+    int hits = 0;
+    int total = 0;
+    float score;
+    while (std::getline(game,line)) {
+        std::stringstream stream_line(line);
+        stream_line >> code;
+        if (code == "T" || code == "G") {
+            total++;
+            stream_line >> code;
+            stream_line >> state;
+            if (state == "OK"){
+                hits++;
+            }
+        }
+    }
+    game.close();
+    score = (hits*100/total);
+    filename = get_score_filename(PLID,(int)score);
+    word = get_player_word(PLID);
+    std::ofstream score_file (filename);
+    score_file << (int)score;
+    score_file << " ";
+    score_file << PLID;
+    score_file << " ";
+    score_file << word;
+    score_file << " ";
+    score_file << hits;
+    score_file << " ";
+    score_file << total;
+    score_file << "\n";
+    score_file.close();
+    return 0;
+    }
+    return -1;
+}
+
 
 char* get_new_name(char* code){
     time_t rawtime;
@@ -394,6 +459,9 @@ char* get_new_name(char* code){
 
 
 void end_current_game(char* PLID,char* code){
+    if (!strcmp(code,"WIN")){
+        int i = create_score_file(PLID);
+    }
     char* game_user_dir = create_user_game_dir(PLID);
     char* user_dir = create_user_dir(PLID);
     char* command = new char[100];
