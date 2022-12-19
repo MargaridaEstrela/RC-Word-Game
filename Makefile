@@ -49,4 +49,5 @@ clang-format:
 
 clean: 
 	@echo Cleaning... 
-	rm -f ./*.o playerApp/*.o gameServer/*.o player GS server_udp server_tcp
+	rm -f ./*.o playerApp/*.o gameServer/*.o player GS server_udp server_tcp 
+	rm -rf ./GAMES ./SCORES
