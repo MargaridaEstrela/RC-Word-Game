@@ -69,6 +69,14 @@ void setup_tcp(void)
     }
 }
 
+
+int check_score_file(){
+
+
+}
+
+
+
 void process(void)
 {
     std::cout << "start process" << std::endl;
@@ -89,18 +97,65 @@ void process(void)
             perror("read failed");
             exit(1);
         }
+
+        request[n] = '\0';
+
+        char* arg1 = new char[MAX_COMMAND_LINE];
+        char* arg2 = new char[MAX_COMMAND_LINE];
+        char* arg3 = new char[MAX_COMMAND_LINE];
+        char* arg4 = new char[MAX_COMMAND_LINE];
+
+        sscanf(request, "%s %s %s %s", arg1, arg2, arg3, arg4);
+        std::cout << request;
+
+        if (!strcmp(request,"GSB")){
+            int status = check_score_file();
+
+            switch(status){
+                case STATUS_EMPTY:
+                    response = "RSB EMPTY\n";
+                    break;
+                
+                case STATUS_OK:
+                    string score_file = create_scoreboard();
+                    pid_t pid = getpid();
+                    string filename = "TOPSCORES_" + std::to_string(pid) + ".txt";
+                    string size = std::to_string(score_file.length());
+                    response = "RSB OK " + filename + " " + size + " " + score_file;
+                    break;
+            }
+
+        }
+        else if(!strcmp(request,"GHL")){
+
+        }
+        else if(!strcmp(request,"STA")){
+
+        }
+        else{
+
+        }
+
+        // SEND RESPONSE
     }
 }
 
 int main(int argc, char* argv[])
 {
     GSPORT = argv[2];
-    verbose = argv[3];
+    char* v = argv[3];
+
+    if (!strcmp(v,"YES")) {
+        verbose = true;
+    } else {
+        verbose = false;
+    }
 
     setup_tcp();
+    std::cout << "setup TCP" << std::endl;
     process();
 
-    // end_TCP_session();
+    //end_TCP_session();
 
     return 0;
 }

@@ -77,11 +77,11 @@ int main(int argc, char* argv[])
     //udp_pid = fork();
     if (udp_pid == 0) {
         execl("./server_udp","server_udp", word, GSPORT.c_str(),verbose.c_str(), NULL);
-        cerr << errno;
         cerr << "ERROR: cannot execute UDP server\n";
         exit(EXIT_FAILURE);
-    } else if (udp_pid == -1) {
-        execl("./server_tcp", "./server_tcp", word, GSPORT.c_str(), verbose, NULL);
+    } else {
+        execl("./server_tcp","server_tcp", word, GSPORT.c_str(),verbose.c_str(), NULL);
+        cerr << errno;
         cerr << "ERROR: cannot execute TCP server\n";
         exit(EXIT_FAILURE);
     }

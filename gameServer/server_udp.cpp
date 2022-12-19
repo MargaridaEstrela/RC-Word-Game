@@ -372,7 +372,7 @@ int main(int argc, char* argv[])
 
     setup_udp();
 
-    std::cout << "setup" << std::endl;
+    std::cout << "setup UDP" << std::endl;
     process();
 
     end_UDP_session();

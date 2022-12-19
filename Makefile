@@ -5,7 +5,7 @@ CXXFLAGS = -g -Wall -Wextra -std=c++11
 .PHONY: all clean run
 CXXSOURCES = ./playerApp/*.cpp ./gameServer/*.cpp aux_functions.cpp aux_functions.hpp constants.hpp
  
-all: player GS server_udp
+all: player GS server_udp server_tcp
 
 
 # PLAYER
@@ -23,11 +23,17 @@ GS: gameServer/server.o
 server_udp: gameServer/server_udp.o aux_functions.o gameServer/data.o 
 		g++ $(CXXFLAGS) -o server_udp gameServer/server_udp.o aux_functions.o gameServer/data.o
 
+server_tcp: gameServer/server_tcp.o aux_functions.o gameServer/data.o 
+		g++ $(CXXFLAGS) -o server_tcp gameServer/server_tcp.o aux_functions.o gameServer/data.o
+
 gameServer/server.o: gameServer/server.cpp 
 		g++ $(CXXFLAGS) -o gameServer/server.o -c gameServer/server.cpp
 
 gameServer/server_udp.o: gameServer/server_udp.cpp gameServer/data.hpp aux_functions.hpp
 		g++ $(CXXFLAGS) -o gameServer/server_udp.o -c gameServer/server_udp.cpp
+
+gameServer/server_tcp.o: gameServer/server_tcp.cpp gameServer/data.hpp aux_functions.hpp
+		g++ $(CXXFLAGS) -o gameServer/server_tcp.o -c gameServer/server_tcp.cpp
 
 gameServer/data.o: gameServer/data.cpp aux_functions.hpp 
 		g++ $(CXXFLAGS) -o gameServer/data.o -c gameServer/data.cpp
@@ -43,4 +49,4 @@ clang-format:
 
 clean: 
 	@echo Cleaning... 
-	rm -f ./*.o playerApp/*.o gameServer/*.o player GS server_udp
+	rm -f ./*.o playerApp/*.o gameServer/*.o player GS server_udp server_tcp
