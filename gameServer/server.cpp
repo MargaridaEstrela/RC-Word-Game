@@ -20,7 +20,7 @@ using namespace std;
 
 // GLOBAL VARIABLES
 string GSPORT = "58034";
-bool verbose = false;
+string verbose = "NO";
 char* word;
 
 pid_t udp_pid;
@@ -54,7 +54,7 @@ void decoder(int argc, char* argv[])
             if (string(argv[i]) == "-p") {
                 GSPORT = argv[i + 1];
             } else if (string(argv[i]) == "-v") {
-                verbose = true;
+                verbose = "YES";
             } else {
                 cerr << "ERROR: unknown flag: " << argv[i] << ". Usage: ./GS word_file [-p GSport] [-v]\n";
                 exit(EXIT_FAILURE);
@@ -73,21 +73,18 @@ int main(int argc, char* argv[])
 
  
     udp_pid = fork();
-    tcp_pid = fork();
 
-
-    std::cout << "word: " << word << std::endl;
-    std::cout << "port: " << GSPORT << std::endl;
-    std::cout << "verbose: " << verbose << std::endl;
-
+    //udp_pid = fork();
     if (udp_pid == 0) {
-        execl("./server_udp", "./server_udp", word, GSPORT.c_str(), 1, NULL);
+        execl("./server_udp","server_udp", word, GSPORT.c_str(),verbose.c_str(), NULL);
+        cerr << errno;
         cerr << "ERROR: cannot execute UDP server\n";
         exit(EXIT_FAILURE);
     } else if (udp_pid == -1) {
         exit(EXIT_FAILURE);
     }
 
+    tcp_pid = fork(); // Por mim metiamos este tcp no udp_pid == -1
     // if (tcp_pid == 0) {
     //     execl("./server_tcp", "./server_tcp", word, GSPORT.c_str(), verbose, NULL);
     //     cerr << "ERROR: cannot execute TCP server\n";

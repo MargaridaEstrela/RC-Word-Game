@@ -587,6 +587,30 @@ int check_play_status(char* PLID, char* letter, int trials){
 
 }
 
+int check_guess_status(char* PLID,char* guess, int trials){
+    char* user_game_dir = create_user_game_dir(PLID);
+    int size = strlen(guess);
+    if (size < 3 || size > 30){
+        return STATUS_ERR;
+    }
+    for (int i = 0; i < size; i++){
+        if (isalpha(guess[i]) == 0){
+            return STATUS_ERR;
+        }
+        guess[i] = tolower(guess[i]);
+    }
+
+    if (!check_PLID(PLID) || !check_ongoing_game(user_game_dir)) {
+        return STATUS_ERR;
+    }
+    else if(trials == get_trials(PLID)){
+        return check_word(PLID,guess);
+    }
+    else{
+        return STATUS_INV;
+    }
+}
+
 
 int get_errors(char* PLID){
     string code,state;

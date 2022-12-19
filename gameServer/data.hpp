@@ -66,6 +66,7 @@ int check_letter(char *PLID, char *letter);
 int check_word(char* PLID, char* guess);
 int check_last_played(char *PLID, char* guess, char *code);
 int check_play_status(char* PLID, char* letter, int trials);
+int check_guess_status(char* PLID, char* guess, int trials);
 
 int get_errors(char *PLID);
 

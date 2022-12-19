@@ -209,7 +209,7 @@ void process(void)
 
         } else if (!strcmp(arg1, "PWG")) {
 
-            status = check_play_status(arg2,arg3,atoi(arg4));
+            status = check_guess_status(arg2,arg3,atoi(arg4));
             int trial = get_trials(arg2);
 
             switch (status) {
@@ -320,19 +320,19 @@ void ctrl_c_handler(int sig)
 
 int main(int argc, char* argv[])
 {
-    std::cout << "here" << std::endl;
     word = new char[sizeof(argv[1])];
     word = argv[1];
     GSPORT = argv[2];
+    char* v = argv[3];
+    std::cout << word;
+    std::cout << GSPORT;
+    std::cout << v;
 
     // if (*argv[3] == 1) {
     //     verbose = true;
     // } else {
     //     verbose = false;
     // }
-
-
-    std::cout << verbose << std::endl;
 
     setup_udp();
 
