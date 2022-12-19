@@ -29,14 +29,27 @@ pid_t tcp_pid;
 // FUNCTIONS
 void decoder(int argc, char* argv[]);
 
+
+
 void decoder(int argc, char* argv[])
 {
+    std::cout << *argv << std::endl;
 
     if (argc == 2) {
         word = new char[sizeof(argv[1])];
         word = argv[1];
         return;
-    } else if (argc >= 3 & argc <= 5) {
+    }
+
+    if(argc < 2 || argc > 5){
+        cerr << "ERROR: invalid application start command. Usage: ./GS word_file [-p GSport] [-v]\n";
+        exit(EXIT_FAILURE);
+    }
+
+    word = new char[sizeof(argv[1])];
+    word = argv[1];
+
+    if (argc >= 3 && argc <= 5) {
         for (int i = 2; i < argc; i += 2) {
             if (string(argv[i]) == "-p") {
                 GSPORT = argv[i + 1];
@@ -47,27 +60,28 @@ void decoder(int argc, char* argv[])
                 exit(EXIT_FAILURE);
             }
         }
-    } else {
-        cerr << "ERROR: invalid application start command. Usage: ./GS word_file [-p GSport] [-v]\n";
-        exit(EXIT_FAILURE);
     }
+
     return;
 }
 
 int main(int argc, char* argv[])
 {
-
     decoder(argc, argv);
     mkdir(GAMES_DIR, 0777);
     mkdir(SCORES_DIR, 0777);
 
+ 
     udp_pid = fork();
     tcp_pid = fork();
 
-    
+
+    std::cout << "word: " << word << std::endl;
+    std::cout << "port: " << GSPORT << std::endl;
+    std::cout << "verbose: " << verbose << std::endl;
 
     if (udp_pid == 0) {
-        execl("./server_udp", "./server_udp", word, GSPORT.c_str(), verbose, NULL);
+        execl("./server_udp", "./server_udp", word, GSPORT.c_str(), 1, NULL);
         cerr << "ERROR: cannot execute UDP server\n";
         exit(EXIT_FAILURE);
     } else if (udp_pid == -1) {

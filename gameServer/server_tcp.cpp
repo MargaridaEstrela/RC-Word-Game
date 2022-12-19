@@ -8,6 +8,7 @@
 #include <cstring>
 #include <ctype.h>
 #include <errno.h>
+#include <fstream>
 #include <iostream>
 #include <netdb.h>
 #include <netinet/in.h>
@@ -20,7 +21,6 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <fstream>
 
 using string = std::string;
 
@@ -37,9 +37,9 @@ struct sockaddr_in addr;
 socklen_t addrlen;
 
 // FUNCTIONS
-void setup_tcp(void) 
+void setup_tcp(void)
 {
-    int errcode; 
+    int errcode;
     fd = socket(AF_INET, SOCK_STREAM, 0);
 
     if (fd < 0) {
@@ -48,7 +48,7 @@ void setup_tcp(void)
     }
 
     memset(&hints, 0, sizeof hints);
-    hints.ai_family = AF_INET;       // IPv4
+    hints.ai_family = AF_INET; // IPv4
     hints.ai_socktype = SOCK_STREAM; // TCP SOCKET
     hints.ai_flags = AI_PASSIVE;
 
@@ -69,7 +69,7 @@ void setup_tcp(void)
     }
 }
 
-void process(void) 
+void process(void)
 {
     std::cout << "start process" << std::endl;
 
@@ -77,9 +77,9 @@ void process(void)
     string response;
     string verb_response;
 
-    while(1) {
+    while (1) {
         addrlen = sizeof(addr);
-        if ((new_fd = accept(fd, (struct sockaddr*) &addr, &addrlen)) == -1) {
+        if ((new_fd = accept(fd, (struct sockaddr*)&addr, &addrlen)) == -1) {
             perror("accept failed");
             exit(1);
         }
@@ -88,11 +88,9 @@ void process(void)
         if (n == -1) {
             perror("read failed");
             exit(1);
-        } 
+        }
     }
-
 }
-
 
 int main(int argc, char* argv[])
 {
@@ -105,4 +103,4 @@ int main(int argc, char* argv[])
     // end_TCP_session();
 
     return 0;
-} 
+}
