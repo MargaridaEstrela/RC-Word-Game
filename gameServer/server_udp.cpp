@@ -312,27 +312,27 @@ int check_last_played(char* PLID,char* guess,char* code){
         if (!strcmp(code,"T")){
             if (last_w[0] == guess[0]){
                 if (word == "OK"){
-                    return 1;
+                    return STATUS_OK;
                 }
                 else {
-                    return 2;
+                    return STATUS_NOK;
                 }
             }
             else {
-                return 0;
+                return STATUS_INV;
             }
         }
         else{
             if (!strcmp(guess,last_w)){
                 if (word == "OK"){
-                    return 1;
+                    return STATUS_OK;
                 }
                 else {
-                    return 2;
+                    return STATUS_NOK;
                 }
             }
             else {
-                return 0;
+                return STATUS_INV;
             }
         }
     }
@@ -429,6 +429,7 @@ int create_score_file(char* PLID){
     int hits = 0;
     int total = 0;
     float score;
+
     while (std::getline(game,line)) {
         std::stringstream stream_line(line);
         stream_line >> code;
@@ -441,6 +442,7 @@ int create_score_file(char* PLID){
             }
         }
     }
+
     game.close();
     score = (hits*100/total);
     filename = get_score_filename(PLID,(int)score);
@@ -482,23 +484,29 @@ char* get_new_name(char* code){
 
 
 void end_current_game(char* PLID,char* code){
+
     if (!strcmp(code,"WIN")){
         int i = create_score_file(PLID);
     }
+
     char* game_user_dir = create_user_game_dir(PLID);
     char* user_dir = create_user_dir(PLID);
     char* command = new char[100];
+
     std::ofstream game(game_user_dir,std::ios::app);
     game << (string)code;
     game << "\n";
     game.close();
+
     strcpy(command,"mv ");
     strcat(command,game_user_dir);
     strcat(command," ");
     strcat(command,user_dir);
+
     char* new_file = get_new_name(code);
     strcat(command,new_file);
     system(command);
+
     return;
 }
 
@@ -602,14 +610,14 @@ void process(void)
             }
             case STATUS_INV: {
                 int last = check_last_played(arg2,arg3,"T");
-                if (last == 0){
+                if (last == STATUS_INV){
                     response = "RLG INV " + std::to_string(trial) + "\n";
                 }
-                else if (last == 1) {
+                else if (last == STATUS_OK) {
                     string pos = get_letter_positions(arg2,arg3);
                     response = "RLG OK " + string(arg4) + " " + pos + "\n";
                 }
-                else if (last == 2) {
+                else if (last == STATUS_NOK) {
                     response = "RLG NOK\n";
                 }
                 break;
@@ -719,14 +727,21 @@ void end_UDP_session()
 
 int main(int argc, char* argv[])
 {
-    if (argc != 4) {
-        std::cerr << "ERROR_UDP: bad input" << std::endl;
-    }
-        
     GSPORT = argv[2];
-    verbose = argv[3];
+
+    // if (*argv[3] == 1) {
+    //     verbose = true;
+    // } else {
+    //     verbose = false;
+    // }
+
+    std::cout << "here" << std::endl;
+
+    std::cout << verbose << std::endl;
 
     setup_udp();
+
+    std::cout << "setup" << std::endl;
     process();
 
     end_UDP_session();

@@ -58,10 +58,13 @@ int main(int argc, char* argv[])
 {
 
     decoder(argc, argv);
-    mkdir(GAMES_DIR,0777);
-    mkdir(SCORES_DIR,0777);
+    mkdir(GAMES_DIR, 0777);
+    mkdir(SCORES_DIR, 0777);
 
     udp_pid = fork();
+    tcp_pid = fork();
+
+    
 
     if (udp_pid == 0) {
         execl("./server_udp", "./server_udp", word, GSPORT.c_str(), verbose, NULL);
@@ -71,7 +74,13 @@ int main(int argc, char* argv[])
         exit(EXIT_FAILURE);
     }
 
-    // samething for TCP
+    // if (tcp_pid == 0) {
+    //     execl("./server_tcp", "./server_tcp", word, GSPORT.c_str(), verbose, NULL);
+    //     cerr << "ERROR: cannot execute TCP server\n";
+    //     exit(EXIT_FAILURE);
+    // } else if (tcp_pid == -1) {
+    //     exit(EXIT_FAILURE);
+    // }
 
     return 0;
 }

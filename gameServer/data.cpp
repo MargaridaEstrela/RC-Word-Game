@@ -8,32 +8,28 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-void create_game_file(char* PLID){
+void create_game_file(char* PLID)
+{
 
     srand(time(0));
     int index = rand() % WORD_COUNT;
     string line;
-    char *game_user_dir = create_user_game_dir(PLID);
-    std::ofstream new_game (game_user_dir);
+    char* game_user_dir = create_user_game_dir(PLID);
+    std::ofstream new_game(game_user_dir);
     std::ifstream word_file(WORD_FILE);
-    for (int i = 0; i < index ; i++){
-        std::getline(word_file,line);
+    for (int i = 0; i < index; i++) {
+        std::getline(word_file, line);
     }
     word_file.close();
     new_game << line;
     new_game << "\n";
     new_game.close();
-
 }
-
-
-
-
 
 int register_user(char* PLID)
 {
     if (!check_PLID(PLID)) {
-        return STATUS_ERR; 
+        return STATUS_ERR;
     }
 
     std::ifstream game;
@@ -43,7 +39,7 @@ int register_user(char* PLID)
     user_dir = create_user_dir(PLID);
 
     if (!user_exists(user_dir)) {
-        check = mkdir(user_dir,0777);
+        check = mkdir(user_dir, 0777);
 
         if (check == -1) {
             std::cerr << "Unable to create directory" << std::endl;
@@ -56,7 +52,7 @@ int register_user(char* PLID)
 
     game_user_dir = create_user_game_dir(PLID);
 
-    if (check_ongoing_game(game_user_dir)) { 
+    if (check_ongoing_game(game_user_dir)) {
         free(game_user_dir);
         return STATUS_NOK;
     }
@@ -65,8 +61,8 @@ int register_user(char* PLID)
     return STATUS_OK;
 }
 
-bool user_exists(char* path) 
-{ 
+bool user_exists(char* path)
+{
     struct stat user_dir;
 
     int stat_user_dir = stat(path, &user_dir);
@@ -80,17 +76,14 @@ bool user_exists(char* path)
 bool check_ongoing_game(char* path)
 {
     FILE* game;
-    game = fopen(path,"r");
-    if (game == NULL){
+    game = fopen(path, "r");
+    if (game == NULL) {
         return false;
-    }
-    else{
+    } else {
         fclose(game);
         return true;
     }
-
 }
-
 
 char* create_user_dir(char* PLID)
 {
@@ -105,9 +98,9 @@ char* create_user_dir(char* PLID)
 
 char* create_user_game_dir(char* PLID)
 {
-    char* user_game_dir = (char*)calloc(/*strlen(USER_OG_GAME_DIR)+*/30, sizeof(char));
+    char* user_game_dir = (char*)calloc(/*strlen(USER_OG_GAME_DIR)+*/ 30, sizeof(char));
 
-    sprintf(user_game_dir, "%s/GAME_%s.txt",GAMES_DIR, PLID);
+    sprintf(user_game_dir, "%s/GAME_%s.txt", GAMES_DIR, PLID);
 
     return user_game_dir;
 }
@@ -118,8 +111,8 @@ char* get_last_guess_letter(char* PLID)
     char *user_dir, *game_user_dir;
     user_dir = create_user_dir(PLID);
     game_user_dir = create_user_game_dir(PLID);
-    //char* code = nullptr;
-    //char* letter = nullptr;
+    // char* code = nullptr;
+    // char* letter = nullptr;
     char* code;
     char* letter;
 
@@ -129,7 +122,7 @@ char* get_last_guess_letter(char* PLID)
         string line;
         int count = 0;
 
-        while (std::getline(game,line)) {
+        while (std::getline(game, line)) {
 
             if (count == 0) {
                 continue;
