@@ -138,7 +138,7 @@ string get_scores()
             }
 
             ss >> word;
-            scoreboard += word + " ";
+            scoreboard += word + "  ";
             ss >> word;
             size = 39 - word.length();
             scoreboard += word;
@@ -148,7 +148,7 @@ string get_scores()
             }
 
             ss >> word;
-            scoreboard += word + " ";
+            scoreboard += word + "              ";
 
             if (word.length() == 1) {
                 scoreboard += " ";
@@ -177,7 +177,7 @@ string create_scoreboard()
 
     scoreboard += "\n";
     scoreboard += "\n";
-    scoreboard += "   SCORE  PLAYER  WORD  GOOD  TRIALS  TOTAL TRIALS\n";
+    scoreboard += "   SCORE  PLAYER   WORD                              GOOD TRIALS   TOTAL TRIALS\n";
     scoreboard += "\n";
 
     string aux = get_scores();
