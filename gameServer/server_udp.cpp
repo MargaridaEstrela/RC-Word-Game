@@ -55,7 +55,7 @@ void setup_udp(void)
     fd = socket(AF_INET, SOCK_DGRAM, 0);
 
     if (fd < 0) {
-        perror("socket failed");
+        perror("UPD: socket failed");
         exit(1);
     }
 
@@ -71,7 +71,7 @@ void setup_udp(void)
 
     n = bind(fd, (const struct sockaddr*)res->ai_addr, res->ai_addrlen);
     if (n < 0) {
-        perror("bind failed");
+        perror("UDP: bind failed");
         exit(1);
     }
 
@@ -348,6 +348,7 @@ void sig_handler(int sig)
 
 int main(int argc, char* argv[])
 {
+    std::cout << "Start UDP socket..." << std::endl;
     word = new char[sizeof(argv[1])];
     word = argv[1];
     GSPORT = new char[sizeof(argv[2])];

@@ -105,53 +105,55 @@ char* create_user_game_dir(char* PLID)
     return user_game_dir;
 }
 
-int create_score_file(char* PLID){
+int create_score_file(char* PLID)
+{
     char* game_user_dir = create_user_game_dir(PLID);
     std::ifstream game;
     game.open(game_user_dir);
-    if (game.is_open()){
-    char* filename;
-    char* word; 
-    string line,code,state;
-    int hits = 0;
-    int total = 0;
-    float score;
+    if (game.is_open()) {
+        char* filename;
+        char* word;
+        string line, code, state;
+        int hits = 0;
+        int total = 0;
+        float score;
 
-    while (std::getline(game,line)) {
-        std::stringstream stream_line(line);
-        stream_line >> code;
-        if (code == "T" || code == "G") {
-            total++;
+        while (std::getline(game, line)) {
+            std::stringstream stream_line(line);
             stream_line >> code;
-            stream_line >> state;
-            if (state == "OK"){
-                hits++;
+            if (code == "T" || code == "G") {
+                total++;
+                stream_line >> code;
+                stream_line >> state;
+                if (state == "OK") {
+                    hits++;
+                }
             }
         }
-    }
 
-    game.close();
-    score = (hits*100/total);
-    filename = get_score_filename(PLID,(int)score);
-    word = get_player_word(PLID);
-    std::ofstream score_file (filename);
-    score_file << (int)score;
-    score_file << " ";
-    score_file << PLID;
-    score_file << " ";
-    score_file << word;
-    score_file << " ";
-    score_file << hits;
-    score_file << " ";
-    score_file << total;
-    score_file << "\n";
-    score_file.close();
-    return 0;
+        game.close();
+        score = (hits * 100 / total);
+        filename = get_score_filename(PLID, (int)score);
+        word = get_player_word(PLID);
+        std::ofstream score_file(filename);
+        score_file << (int)score;
+        score_file << " ";
+        score_file << PLID;
+        score_file << " ";
+        score_file << word;
+        score_file << " ";
+        score_file << hits;
+        score_file << " ";
+        score_file << total;
+        score_file << "\n";
+        score_file.close();
+        return 0;
     }
     return -1;
 }
 
-char* get_new_name(char* code){
+char* get_new_name(char* code)
+{
     time_t rawtime;
     tm* timeinfo;
     char* buffer = new char[80];
@@ -159,15 +161,16 @@ char* get_new_name(char* code){
     time(&rawtime);
     timeinfo = localtime(&rawtime);
 
-    strftime(buffer,80,"/%Y%m%d_%H%M%S",timeinfo);
-    strcat(buffer,"_");
-    strcat(buffer,code);
-    strcat(buffer,".txt");
-    
+    strftime(buffer, 80, "/%Y%m%d_%H%M%S", timeinfo);
+    strcat(buffer, "_");
+    strcat(buffer, code);
+    strcat(buffer, ".txt");
+
     return buffer;
 }
 
-char* get_score_filename(char* PLID, int score){
+char* get_score_filename(char* PLID, int score)
+{
     time_t rawtime;
     tm* timeinfo;
     char* buffer = new char[80];
@@ -178,23 +181,24 @@ char* get_score_filename(char* PLID, int score){
 
     string check = std::to_string(score);
     char* pad = "";
-    if (check.length() == 2){
+    if (check.length() == 2) {
         pad = "0";
     }
-    if (check.length() == 1){
-        pad="00";
+    if (check.length() == 1) {
+        pad = "00";
     }
-    strftime(buffer,80,"%d%m%Y_%H%M%S",timeinfo);
-    sprintf(filename,"SCORES/%s%d_%s_",pad,score,PLID);
-    strcat(filename,buffer);
-    strcat(filename,".txt");
-    
+    strftime(buffer, 80, "%d%m%Y_%H%M%S", timeinfo);
+    sprintf(filename, "SCORES/%s%d_%s_", pad, score, PLID);
+    strcat(filename, buffer);
+    strcat(filename, ".txt");
+
     return filename;
 }
 
-void end_current_game(char* PLID,char* code){
+void end_current_game(char* PLID, char* code)
+{
 
-    if (!strcmp(code,"WIN")){
+    if (!strcmp(code, "WIN")) {
         int i = create_score_file(PLID);
     }
 
@@ -202,45 +206,44 @@ void end_current_game(char* PLID,char* code){
     char* user_dir = create_user_dir(PLID);
     char* command = new char[100];
 
-    std::ofstream game(game_user_dir,std::ios::app);
+    std::ofstream game(game_user_dir, std::ios::app);
     game << (string)code;
     game << "\n";
     game.close();
 
-    strcpy(command,"mv ");
-    strcat(command,game_user_dir);
-    strcat(command," ");
-    strcat(command,user_dir);
+    strcpy(command, "mv ");
+    strcat(command, game_user_dir);
+    strcat(command, " ");
+    strcat(command, user_dir);
 
     char* new_file = get_new_name(code);
-    strcat(command,new_file);
+    strcat(command, new_file);
     system(command);
 
     return;
 }
 
-
-
-
-char* get_player_word(char* PLID){
+char* get_player_word(char* PLID)
+{
     string line;
     char* word = new char[MAX_WORD_SIZE];
     char* game_user_dir = create_user_game_dir(PLID);
     std::ifstream game(game_user_dir);
-    std::getline(game,line);
+    std::getline(game, line);
     std::stringstream ss(line);
     ss >> word;
     return word;
 }
 
-int get_word_size(char* PLID){
+int get_word_size(char* PLID)
+{
 
     char* game_user_dir = create_user_game_dir(PLID);
     std::ifstream game;
     string line;
     game.open(game_user_dir);
-    if (game.is_open()){
-        std::getline(game,line);
+    if (game.is_open()) {
+        std::getline(game, line);
         std::stringstream ss(line);
         ss >> line;
         game.close();
@@ -315,25 +318,25 @@ char* get_last_guess_word(char* PLID)
     return word;
 }
 
-
-string get_letter_positions(char* PLID,char* letter){
+string get_letter_positions(char* PLID, char* letter)
+{
     char* game_user_dir = create_user_game_dir(PLID);
     std::ifstream game;
     string line;
     char* word = new char[MAX_WORD_SIZE];
     game.open(game_user_dir);
-    if (game.is_open()){
-        std::getline(game,line);
+    if (game.is_open()) {
+        std::getline(game, line);
         std::stringstream ss(line);
         ss >> word;
         game.close();
         int size = strlen(word);
         int counter = 0;
         line = "";
-        for (int i = 0; i < size; i++){
-            if (word[i] == letter[0]){
+        for (int i = 0; i < size; i++) {
+            if (word[i] == letter[0]) {
                 counter++;
-                line += std::to_string(i+1);
+                line += std::to_string(i + 1);
                 line += " ";
             }
         }
@@ -343,7 +346,6 @@ string get_letter_positions(char* PLID,char* letter){
     game.close();
     return "ERR";
 }
-
 
 int get_trials(char* PLID)
 {
@@ -382,8 +384,9 @@ void add_trial(char* PLID, char* trial, char* code)
     }
 }
 
-int check_completion(char* PLID,char* play){
-    string code,state;
+int check_completion(char* PLID, char* play)
+{
+    string code, state;
     char letter;
     char* game_user_dir = create_user_game_dir(PLID);
     char* play_word = get_player_word(PLID);
@@ -394,33 +397,32 @@ int check_completion(char* PLID,char* play){
     if (game.is_open()) {
         string line;
         int count = 0;
-        for (int i=0; i < size; i++){
-            if (play_word[i] == play[0]){
+        for (int i = 0; i < size; i++) {
+            if (play_word[i] == play[0]) {
                 count++;
             }
         }
 
-        while (std::getline(game,line)) {
+        while (std::getline(game, line)) {
             std::stringstream stream_line(line);
             stream_line >> code;
             if (code == "T") {
                 stream_line >> letter;
                 stream_line >> state;
-                if (state == "NOK"){
+                if (state == "NOK") {
                     continue;
                 }
-                for (int i = 0; i < size; i++){
-                    if (play_word[i] == letter){
+                for (int i = 0; i < size; i++) {
+                    if (play_word[i] == letter) {
                         count++;
                     }
                 }
             }
         }
         game.close();
-        if (count == size){
+        if (count == size) {
             return 1;
-        }
-        else {
+        } else {
             return 0;
         }
     } else {
@@ -428,18 +430,18 @@ int check_completion(char* PLID,char* play){
     }
 }
 
-
-int check_no_moves(char* PLID){
+int check_no_moves(char* PLID)
+{
     int n = get_trials(PLID);
-    if (n == 1){
+    if (n == 1) {
         return 1;
-    }
-    else {
+    } else {
         return 0;
     }
 }
 
-int check_dup(char* PLID,char* play){
+int check_dup(char* PLID, char* play)
+{
     char* game_user_dir = create_user_game_dir(PLID);
     string code, letter;
     std::ifstream game;
@@ -448,14 +450,14 @@ int check_dup(char* PLID,char* play){
     if (game.is_open()) {
         string line;
 
-        while (std::getline(game,line)) {
+        while (std::getline(game, line)) {
             std::stringstream stream_line(line);
             stream_line >> code;
             if (code == "T") {
                 stream_line >> letter;
-                if (!strcmp(play,letter.c_str())){
+                if (!strcmp(play, letter.c_str())) {
                     game.close();
-                    return 1; 
+                    return 1;
                 }
             }
         }
@@ -471,7 +473,7 @@ int check_letter(char* PLID, char* letter)
     char* word = get_player_word(PLID);
     int size = strlen(word);
     for (int i = 0; i < size; i++) {
-        if (letter[0] == word[i]){
+        if (letter[0] == word[i]) {
             n++;
         }
     }
@@ -483,23 +485,22 @@ int check_letter(char* PLID, char* letter)
     } else if (n == 0) {
         return STATUS_OVR;
     } else if (n > 0) {
-        if (check_completion(PLID,letter)){
+        if (check_completion(PLID, letter)) {
             return STATUS_WIN;
-        }
-        else {
+        } else {
             return STATUS_OK;
         }
     }
 }
 
-int check_word(char* PLID, char* guess){
+int check_word(char* PLID, char* guess)
+{
     int n;
     char* word = get_player_word(PLID);
     int size = strlen(word);
-    if (!strcmp(word,guess)){
+    if (!strcmp(word, guess)) {
         n = 1;
-    }
-    else {
+    } else {
         n = 0;
     }
 
@@ -514,7 +515,8 @@ int check_word(char* PLID, char* guess){
     }
 }
 
-int check_last_played(char* PLID,char* guess,char* code){
+int check_last_played(char* PLID, char* guess, char* code)
+{
     char* game_user_dir = create_user_game_dir(PLID);
     string word;
     char* last_w = new char[MAX_WORD_SIZE];
@@ -527,36 +529,31 @@ int check_last_played(char* PLID,char* guess,char* code){
         string line;
 
         while (check == 'T' || check == 'G') {
-            std::getline(game,line);
+            std::getline(game, line);
             std::stringstream ss(line);
             ss >> check;
             ss >> last_w;
             ss >> word;
         }
         game.close();
-        if (!strcmp(code,"T")){
-            if (last_w[0] == guess[0]){
-                if (word == "OK"){
+        if (!strcmp(code, "T")) {
+            if (last_w[0] == guess[0]) {
+                if (word == "OK") {
                     return STATUS_OK;
-                }
-                else {
+                } else {
                     return STATUS_NOK;
                 }
-            }
-            else {
+            } else {
                 return STATUS_INV;
             }
-        }
-        else{
-            if (!strcmp(guess,last_w)){
-                if (word == "OK"){
+        } else {
+            if (!strcmp(guess, last_w)) {
+                if (word == "OK") {
                     return STATUS_OK;
-                }
-                else {
+                } else {
                     return STATUS_NOK;
                 }
-            }
-            else {
+            } else {
                 return STATUS_INV;
             }
         }
@@ -564,15 +561,16 @@ int check_last_played(char* PLID,char* guess,char* code){
     return -1;
 }
 
-int check_play_status(char* PLID, char* letter, int trials){
+int check_play_status(char* PLID, char* letter, int trials)
+{
     char* game_user_dir = create_user_game_dir(PLID);
 
     int size = strlen(letter);
-    if (size > 1){
+    if (size > 1) {
         return STATUS_ERR;
     }
-    for (int i = 0; i < size; i++){
-        if (isalpha(letter[i]) == 0){
+    for (int i = 0; i < size; i++) {
+        if (isalpha(letter[i]) == 0) {
             return STATUS_ERR;
         }
         letter[i] = tolower(letter[i]);
@@ -580,29 +578,26 @@ int check_play_status(char* PLID, char* letter, int trials){
 
     if (!check_PLID(PLID) || !check_ongoing_game(game_user_dir)) {
         return STATUS_ERR;
-    }
-    else if(trials == get_trials(PLID)){
-        if (check_dup(PLID,letter)){
+    } else if (trials == get_trials(PLID)) {
+        if (check_dup(PLID, letter)) {
             return STATUS_DUP;
+        } else {
+            return check_letter(PLID, letter);
         }
-        else {
-            return check_letter(PLID,letter);
-        }
-    }
-    else{
+    } else {
         return STATUS_INV;
     }
-
 }
 
-int check_guess_status(char* PLID,char* guess, int trials){
+int check_guess_status(char* PLID, char* guess, int trials)
+{
     char* user_game_dir = create_user_game_dir(PLID);
     int size = strlen(guess);
-    if (size < 3 || size > 30){
+    if (size < 3 || size > 30) {
         return STATUS_ERR;
     }
-    for (int i = 0; i < size; i++){
-        if (isalpha(guess[i]) == 0){
+    for (int i = 0; i < size; i++) {
+        if (isalpha(guess[i]) == 0) {
             return STATUS_ERR;
         }
         guess[i] = tolower(guess[i]);
@@ -610,18 +605,16 @@ int check_guess_status(char* PLID,char* guess, int trials){
 
     if (!check_PLID(PLID) || !check_ongoing_game(user_game_dir)) {
         return STATUS_ERR;
-    }
-    else if(trials == get_trials(PLID)){
-        return check_word(PLID,guess);
-    }
-    else{
+    } else if (trials == get_trials(PLID)) {
+        return check_word(PLID, guess);
+    } else {
         return STATUS_INV;
     }
 }
 
-
-int get_errors(char* PLID){
-    string code,state;
+int get_errors(char* PLID)
+{
+    string code, state;
     char* game_user_dir = create_user_game_dir(PLID);
     std::ifstream game;
     game.open(game_user_dir);
@@ -629,13 +622,13 @@ int get_errors(char* PLID){
 
     if (game.is_open()) {
         string line;
-        while (std::getline(game,line)) {
+        while (std::getline(game, line)) {
             std::stringstream stream_line(line);
             stream_line >> code;
             if (code == "T" || code == "G") {
                 stream_line >> code;
                 stream_line >> state;
-                if (state == "NOK"){
+                if (state == "NOK") {
                     errors++;
                 }
             }

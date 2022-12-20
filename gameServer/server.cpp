@@ -99,17 +99,13 @@ int main(int argc, char* argv[])
 
     if (udp_pid == 0) {
         execl("./server_udp", "server_udp", word, GSPORT.c_str(), verbose.c_str(), NULL);
-        std::cerr << "ERROR: cannot execute UDP server\n";
+        std::cerr << "ERROR UDP: cannot execute UDP server\n";
         exit(EXIT_FAILURE);
-    } else {
+    } else if (udp_pid == -1 || tcp_pid == -1) {
         exit(EXIT_FAILURE);
-    }
-
-    if (tcp_pid == 0) {
+    } else if (tcp_pid == 0){
         execl("./server_tcp", "server_tcp", word, GSPORT.c_str(), verbose.c_str(), NULL);
-        std::cerr << "ERROR: cannot execute TCP server\n";
-        exit(EXIT_FAILURE);
-    } else {
+        std::cerr << "ERROR TCP: cannot execute TCP server\n";
         exit(EXIT_FAILURE);
     }
 

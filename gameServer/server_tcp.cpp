@@ -42,12 +42,15 @@ socklen_t addrlen;
 void setup_tcp(void)
 {
     int errcode;
+    int optval = 1;
     fd = socket(AF_INET, SOCK_STREAM, 0);
 
     if (fd < 0) {
-        perror("socket failed");
+        perror("TCP: socket failed");
         exit(1);
     }
+
+    setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
 
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_INET; // IPv4
@@ -61,12 +64,12 @@ void setup_tcp(void)
 
     n = bind(fd, res->ai_addr, res->ai_addrlen);
     if (n < 0) {
-        perror("bind failed");
+        perror("TCP: bind failed");
         exit(1);
     }
 
     if (listen(fd, 5) < 0) {
-        perror("listen failed");
+        perror("TCP: listen failed");
         exit(1);
     }
 }
@@ -291,7 +294,7 @@ void process(void)
         char* arg4 = new char[MAX_COMMAND_LINE];
 
         sscanf(request, "%s %s %s %s", arg1, arg2, arg3, arg4);
-        std::cout << (string)arg1;
+        std::cout << *arg1;
 
         if (!strcmp(arg1, "GSB")) {
             int status = check_score_file();
