@@ -9,6 +9,7 @@
 #include <iostream>
 #include <netdb.h>
 #include <netinet/in.h>
+#include <signal.h>
 #include <sstream>
 #include <stdexcept>
 #include <stdio.h>
@@ -18,7 +19,6 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <signal.h>
 
 using string = std::string;
 
@@ -39,11 +39,9 @@ struct sigaction oldact;
 pid_t udp_pid;
 pid_t tcp_pid;
 
-
 // FUNCTIONS
 void decoder(int argc, char* argv[]);
 void ctrl_c_handler(int sig);
-
 
 void decoder(int argc, char* argv[])
 {
@@ -53,7 +51,7 @@ void decoder(int argc, char* argv[])
         return;
     }
 
-    if(argc < 2 || argc > 5){
+    if (argc < 2 || argc > 5) {
         std::cerr << "ERROR: invalid application start command. Usage: ./GS word_file [-p GSport] [-v]\n";
         exit(EXIT_FAILURE);
     }
@@ -76,7 +74,7 @@ void decoder(int argc, char* argv[])
     return;
 }
 
-void ctrl_c_handler(int sig)
+void sig_handler(int sig)
 {
     std::cout << "Caught Ctrl-C..." << std::endl;
 
@@ -89,6 +87,8 @@ void ctrl_c_handler(int sig)
 
 int main(int argc, char* argv[])
 {
+    struct sigaction sig_action;
+
     decoder(argc, argv);
 
     mkdir(GAMES_DIR, 0777);
@@ -96,9 +96,9 @@ int main(int argc, char* argv[])
 
     udp_pid = fork();
     tcp_pid = fork();
-    
+
     if (udp_pid == 0) {
-        execl("./server_udp","server_udp", word, GSPORT.c_str(),verbose.c_str(), NULL);
+        execl("./server_udp", "server_udp", word, GSPORT.c_str(), verbose.c_str(), NULL);
         std::cerr << "ERROR: cannot execute UDP server\n";
         exit(EXIT_FAILURE);
     } else {
@@ -112,6 +112,12 @@ int main(int argc, char* argv[])
     } else {
         exit(EXIT_FAILURE);
     }
+
+    // setup SIGINT action
+    memset(&sig_action, 0, sizeof(sig_action));
+    sig_action.sa_handler = &sig_handler;
+    sigemptyset(&sig_action.sa_mask);
+    sig_action.sa_flags = 0;
 
     return 0;
 }
