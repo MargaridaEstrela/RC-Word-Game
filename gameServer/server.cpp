@@ -1,9 +1,11 @@
 #include "data.hpp"
 
 #include <arpa/inet.h>
+#include <cstdio>
 #include <cstring>
 #include <ctype.h>
 #include <errno.h>
+#include <fstream>
 #include <iostream>
 #include <netdb.h>
 #include <netinet/in.h>
@@ -12,29 +14,39 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <string>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <signal.h>
 
-using namespace std;
+using string = std::string;
 
 // GLOBAL VARIABLES
 string GSPORT = "58034";
 string verbose = "NO";
 char* word;
 
+int fd, new_fd;
+ssize_t n;
+
+struct addrinfo hints, *res;
+struct sockaddr_in addr;
+socklen_t addrlen;
+
+struct sigaction oldact;
+
 pid_t udp_pid;
 pid_t tcp_pid;
 
+
 // FUNCTIONS
 void decoder(int argc, char* argv[]);
-
+void ctrl_c_handler(int sig);
 
 
 void decoder(int argc, char* argv[])
 {
-    std::cout << *argv << std::endl;
-
     if (argc == 2) {
         word = new char[sizeof(argv[1])];
         word = argv[1];
@@ -42,7 +54,7 @@ void decoder(int argc, char* argv[])
     }
 
     if(argc < 2 || argc > 5){
-        cerr << "ERROR: invalid application start command. Usage: ./GS word_file [-p GSport] [-v]\n";
+        std::cerr << "ERROR: invalid application start command. Usage: ./GS word_file [-p GSport] [-v]\n";
         exit(EXIT_FAILURE);
     }
 
@@ -56,44 +68,50 @@ void decoder(int argc, char* argv[])
             } else if (string(argv[i]) == "-v") {
                 verbose = "YES";
             } else {
-                cerr << "ERROR: unknown flag: " << argv[i] << ". Usage: ./GS word_file [-p GSport] [-v]\n";
+                std::cerr << "ERROR: unknown flag: " << argv[i] << ". Usage: ./GS word_file [-p GSport] [-v]\n";
                 exit(EXIT_FAILURE);
             }
         }
     }
-
     return;
+}
+
+void ctrl_c_handler(int sig)
+{
+    std::cout << "Caught Ctrl-C..." << std::endl;
+
+    kill(udp_pid, SIGINT);
+    kill(tcp_pid, SIGINT);
+
+    sigaction(SIGINT, &oldact, NULL);
+    kill(0, SIGINT);
 }
 
 int main(int argc, char* argv[])
 {
     decoder(argc, argv);
+
     mkdir(GAMES_DIR, 0777);
     mkdir(SCORES_DIR, 0777);
 
- 
     udp_pid = fork();
-
-    //udp_pid = fork();
+    tcp_pid = fork();
+    
     if (udp_pid == 0) {
         execl("./server_udp","server_udp", word, GSPORT.c_str(),verbose.c_str(), NULL);
-        cerr << "ERROR: cannot execute UDP server\n";
+        std::cerr << "ERROR: cannot execute UDP server\n";
         exit(EXIT_FAILURE);
     } else {
-        execl("./server_tcp","server_tcp", word, GSPORT.c_str(),verbose.c_str(), NULL);
-        cerr << errno;
-        cerr << "ERROR: cannot execute TCP server\n";
         exit(EXIT_FAILURE);
     }
 
-    //tcp_pid = fork(); // Por mim metiamos este tcp no udp_pid == -1
-    // if (tcp_pid == 0) {
-    //     execl("./server_tcp", "./server_tcp", word, GSPORT.c_str(), verbose, NULL);
-    //     cerr << "ERROR: cannot execute TCP server\n";
-    //     exit(EXIT_FAILURE);
-    // } else if (tcp_pid == -1) {
-    //     exit(EXIT_FAILURE);
-    // }
+    if (tcp_pid == 0) {
+        execl("./server_tcp", "server_tcp", word, GSPORT.c_str(), verbose.c_str(), NULL);
+        std::cerr << "ERROR: cannot execute TCP server\n";
+        exit(EXIT_FAILURE);
+    } else {
+        exit(EXIT_FAILURE);
+    }
 
     return 0;
 }
