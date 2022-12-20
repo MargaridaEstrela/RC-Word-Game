@@ -176,8 +176,16 @@ char* get_score_filename(char* PLID, int score){
     time(&rawtime);
     timeinfo = localtime(&rawtime);
 
+    string check = std::to_string(score);
+    char* pad = "";
+    if (check.length() == 2){
+        pad = "0";
+    }
+    if (check.length() == 1){
+        pad="00";
+    }
     strftime(buffer,80,"%d%m%Y_%H%M%S",timeinfo);
-    sprintf(filename,"SCORES/%d_%s_",score,PLID);
+    sprintf(filename,"SCORES/%s%d_%s_",pad,score,PLID);
     strcat(filename,buffer);
     strcat(filename,".txt");
     
