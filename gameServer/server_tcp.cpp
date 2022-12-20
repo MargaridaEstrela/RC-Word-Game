@@ -260,6 +260,7 @@ void process(void)
     char request[MAX_TCP_READ];
     string response;
     string verb_response;
+    pid_t child_pid;
 
     while (1) {
         addrlen = sizeof(addr);
@@ -267,6 +268,14 @@ void process(void)
             perror("accept failed");
             exit(1);
         }
+
+        if ((child_pid = fork()) != 0) {
+            std::cerr << "ERROR: fork failed" << std::endl;
+            close(new_fd);
+            exit(EXIT_FAILURE);
+        }
+
+        close(fd);
 
         n = read(new_fd, request, MAX_TCP_READ);
         if (n == -1) {
