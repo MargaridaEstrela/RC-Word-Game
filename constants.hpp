@@ -6,7 +6,7 @@
 #define MAX_TCP_RESPONSE 45
 #define MAX_TCP_READ 1024
 #define PLID_SIZE 6
-#define WORD_COUNT 26
+#define WORD_COUNT 25
 #define MAX_WORD_SIZE 30
 
 // STATUS CODES
