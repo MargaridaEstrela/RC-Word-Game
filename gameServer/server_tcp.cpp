@@ -71,24 +71,22 @@ void setup_tcp(void)
     }
 }
 
-
-int check_score_file(){
-    DIR *dp;
+int check_score_file()
+{
+    DIR* dp;
     int i = 0;
-    struct dirent *ep;     
-    dp = opendir (SCORES_DIR);
+    struct dirent* ep;
+    dp = opendir(SCORES_DIR);
 
-    if (dp != NULL)
-    {
-        while (ep = readdir (dp)){
+    if (dp != NULL) {
+        while (ep = readdir(dp)) {
             i++;
         }
 
-        closedir (dp);
-        if (i == 0){
+        closedir(dp);
+        if (i == 0) {
             return STATUS_EMPTY;
-        }
-        else{
+        } else {
             return STATUS_OK;
         }
     }
@@ -96,80 +94,92 @@ int check_score_file(){
     return -1;
 }
 
-
-string read_score_file(string filename){
-    std::ifstream file (filename);
+string read_score_file(string filename)
+{
+    std::ifstream file(filename);
     string score;
-    std::getline(file,score); 
+    std::getline(file, score);
     return score;
 }
 
-
-
-string get_scores(){
-    std::vector <string> result;
-    string scoreboard="";
-    struct dirent **filelist;
-    int n_entries,i_file;
+string get_scores()
+{
+    std::vector<string> result;
+    string scoreboard = "";
+    struct dirent** filelist;
+    int n_entries, i_file;
     char f_name[50];
-    n_entries = scandir("SCORES/",&filelist,0,alphasort);
+    n_entries = scandir("SCORES/", &filelist, 0, alphasort);
     int counter = 1;
-    while (n_entries--){
-        if(filelist[n_entries]->d_name[0]!='.'){
-            if (counter == 11){
+
+    while (n_entries--) {
+        if (filelist[n_entries]->d_name[0] != '.') {
+            if (counter == 11) {
                 break;
             }
-            sprintf(f_name,"SCORES/%s",filelist[n_entries]->d_name);
+
+            sprintf(f_name, "SCORES/%s", filelist[n_entries]->d_name);
             string score_file = read_score_file((string)f_name);
             std::stringstream ss(score_file);
             string word;
             int size;
-            if (counter < 10){
+            if (counter < 10) {
                 scoreboard += " ";
             }
+
             scoreboard += std::to_string(counter);
             counter++;
             scoreboard += " - ";
             ss >> word;
             scoreboard += word;
-            for (int k = 0; k < (5-word.length()); k++){
+
+            for (int k = 0; k < (5 - word.length()); k++) {
                 scoreboard += " ";
             }
+
             ss >> word;
-            scoreboard += word + "  ";
+            scoreboard += word + " ";
             ss >> word;
             size = 39 - word.length();
             scoreboard += word;
-            for (int j = 0; j < size ; j++){
+
+            for (int j = 0; j < size; j++) {
                 scoreboard += " ";
             }
+
             ss >> word;
-            scoreboard += word + "              ";
-            if (word.length()==1){
+            scoreboard += word + " ";
+
+            if (word.length() == 1) {
                 scoreboard += " ";
             }
+
             ss >> word;
-            scoreboard += word + "\n"; 
+            scoreboard += word + "\n";
         }
     }
-
     return scoreboard;
 }
 
-
-string create_scoreboard(){
+string create_scoreboard()
+{
     string scoreboard = "";
-    for (int i = 0; i < 32; i++){
+
+    for (int i = 0; i < 32; i++) {
         scoreboard += "-";
     }
+
     scoreboard += " TOP 10 SCORES ";
-    for (int i = 0; i < 32; i++){
+
+    for (int i = 0; i < 32; i++) {
         scoreboard += "-";
     }
+
     scoreboard += "\n";
     scoreboard += "\n";
-    scoreboard += "   SCORE  PLAYER   WORD                              GOOD TRIALS   TOTAL TRIALS\n";
+    scoreboard += "   SCORE  PLAYER  WORD  GOOD  TRIALS  TOTAL TRIALS\n";
     scoreboard += "\n";
+
     string aux = get_scores();
     scoreboard += aux;
     scoreboard += "\n";
@@ -177,68 +187,71 @@ string create_scoreboard(){
     return scoreboard;
 }
 
-int check_image(char* PLID){
-    if (!check_PLID(PLID) || !check_ongoing_game(PLID)){
+int check_image(char* PLID)
+{
+    if (!check_PLID(PLID) || !check_ongoing_game(PLID)) {
         return STATUS_NOK;
     }
 
-    string line,hint_file,path;
+    string line, hint_file, path;
     char* game_user_dir = create_user_game_dir(PLID);
+
     std::ifstream game(game_user_dir);
-    std::getline(game,line);
+    std::getline(game, line);
     std::stringstream ss(line);
     ss >> path;
     ss >> hint_file;
+
     path = "HINTS/" + hint_file;
     std::cout << path;
+
     std::ifstream file;
     file.open(path);
-    if (file.is_open()){
+
+    if (file.is_open()) {
         file.close();
         return STATUS_OK;
-    }
-    else {
+    } else {
         return STATUS_NOK;
     }
     return 1;
 }
 
+string get_hint_file(char* PLID)
+{
 
-string get_hint_file(char* PLID){
-
-    string line,hint_file,path;
+    string line, hint_file, path;
     char* game_user_dir = create_user_game_dir(PLID);
+
     std::ifstream game(game_user_dir);
-    std::getline(game,line);
+    std::getline(game, line);
     std::stringstream ss(line);
     ss >> line;
     ss >> hint_file;
-    path = "HINTS/" + hint_file;
 
+    path = "HINTS/" + hint_file;
 
     hint_file = "";
     std::ifstream file(path);
-    while (std::getline(file,line)){
+
+    while (std::getline(file, line)) {
         hint_file += line;
     }
     return hint_file;
 }
 
+string get_hint_filename(char* PLID)
+{
 
-string get_hint_filename(char* PLID){
-
-    string filename,line;
+    string filename, line;
     char* game_user_dir = create_user_game_dir(PLID);
     std::ifstream game(game_user_dir);
-    std::getline(game,line);
+    std::getline(game, line);
     std::stringstream ss(line);
     ss >> line;
     ss >> filename;
     return filename;
 }
-
-
-
 
 void process(void)
 {
@@ -271,49 +284,57 @@ void process(void)
         sscanf(request, "%s %s %s %s", arg1, arg2, arg3, arg4);
         std::cout << (string)arg1;
 
-        if (!strcmp(arg1,"GSB")){
+        if (!strcmp(arg1, "GSB")) {
             int status = check_score_file();
-            switch(status){
-                case STATUS_EMPTY:
-                    std::cout << "EMPTY";
-                    response = "RSB EMPTY\n";
-                    break;
-                
-                case STATUS_OK:
-                    string score_file = create_scoreboard();
-                    pid_t pid = getpid();
-                    string filename = "TOPSCORES_" + std::to_string(pid) + ".txt";
-                    string size = std::to_string(score_file.length());
-                    response = "RSB OK " + filename + " " + size + " " + score_file + "\n";
-                    std::cout << score_file;
-                    break;
+            switch (status) {
+            case STATUS_EMPTY:
+                std::cout << "EMPTY";
+                response = "RSB EMPTY\n";
+                break;
+
+            case STATUS_OK:
+                string score_file = create_scoreboard();
+                pid_t pid = getpid();
+                string filename = "TOPSCORES_" + std::to_string(pid) + ".txt";
+                string size = std::to_string(score_file.length());
+                response = "RSB OK " + filename + " " + size + " " + score_file + "\n";
+                std::cout << score_file;
+                break;
             }
 
-        }
-        else if(!strcmp(arg1,"GHL")){
+        } else if (!strcmp(arg1, "GHL")) {
             std::cout << "AQUI";
             int status = check_image(arg2);
-            switch(status){
-                case STATUS_OK:
-                    string hint_file = get_hint_file(arg2);
-                    string filename = get_hint_filename(arg2);
-                    string size = std::to_string(hint_file.length());
-                    std::cout << filename;
-                    std::cout << size;
-                    response = "RHL OK " + filename + " " + size + " " + hint_file + "\n";
-                    break;
+            switch (status) {
+            case STATUS_OK:
+                string hint_file = get_hint_file(arg2);
+                string filename = get_hint_filename(arg2);
+                string size = std::to_string(hint_file.length());
+                std::cout << filename;
+                std::cout << size;
+                response = "RHL OK " + filename + " " + size + " " + hint_file + "\n";
+                break;
             }
 
-        }
-        else if(!strcmp(arg1,"STA")){
+        } else if (!strcmp(arg1, "STA")) {
 
-        }
-        else{
-            std::cout <<"OLA";
+        } else {
+            std::cout << "OLA";
         }
 
         // SEND RESPONSE
+        
+        // AFTER SEND RESPONSE CLOSE NEW_FD
+        close(new_fd);
     }
+}
+
+void end_TCP_session(void)
+{
+    std::cout << "Clossing TCP session..." << std::endl;    
+
+    freeaddrinfo(res);
+    close(fd);
 }
 
 int main(int argc, char* argv[])
@@ -321,7 +342,7 @@ int main(int argc, char* argv[])
     GSPORT = argv[2];
     char* v = argv[3];
 
-    if (!strcmp(v,"YES")) {
+    if (!strcmp(v, "YES")) {
         verbose = true;
     } else {
         verbose = false;
