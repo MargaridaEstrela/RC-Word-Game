@@ -7,28 +7,11 @@
 #include <sstream>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <vector>
 
 int test_word_counter = 1;
 
-void create_game_file(char* PLID)
-{
 
-    if (test_word_counter > WORD_COUNT){
-        test_word_counter = 1;
-    }
-    string line;
-    char* game_user_dir = create_user_game_dir(PLID);
-    std::ofstream new_game(game_user_dir);
-    std::ifstream word_file(WORD_FILE);
-    for (int i = 0; i < test_word_counter; i++) {
-        std::getline(word_file, line);
-    }
-    test_word_counter++;
-    word_file.close();
-    new_game << line;
-    new_game << "\n";
-    new_game.close();
-}
 
 int register_user(char* PLID)
 {
@@ -109,6 +92,26 @@ char* create_user_game_dir(char* PLID)
     return user_game_dir;
 }
 
+void create_game_file(char* PLID)
+{
+
+    if (test_word_counter > WORD_COUNT){
+        test_word_counter = 1;
+    }
+    string line;
+    char* game_user_dir = create_user_game_dir(PLID);
+    std::ofstream new_game(game_user_dir);
+    std::ifstream word_file(WORD_FILE);
+    for (int i = 0; i < test_word_counter; i++) {
+        std::getline(word_file, line);
+    }
+    test_word_counter++;
+    word_file.close();
+    new_game << line;
+    new_game << "\n";
+    new_game.close();
+}
+
 int create_score_file(char* PLID)
 {
     char* game_user_dir = create_user_game_dir(PLID);
@@ -156,23 +159,6 @@ int create_score_file(char* PLID)
     return -1;
 }
 
-char* get_new_name(char* code)
-{
-    time_t rawtime;
-    tm* timeinfo;
-    char* buffer = new char[80];
-
-    time(&rawtime);
-    timeinfo = localtime(&rawtime);
-
-    strftime(buffer, 80, "/%Y%m%d_%H%M%S", timeinfo);
-    strcat(buffer, "_");
-    strcat(buffer, code);
-    strcat(buffer, ".txt");
-
-    return buffer;
-}
-
 char* get_score_filename(char* PLID, int score)
 {
     time_t rawtime;
@@ -197,6 +183,113 @@ char* get_score_filename(char* PLID, int score)
     strcat(filename, ".txt");
 
     return filename;
+}
+
+int check_score_file()
+{
+    DIR* dp;
+    int i = 0;
+    struct dirent* ep;
+    dp = opendir(SCORES_DIR);
+
+    if (dp != NULL) {
+        while (ep = readdir(dp)) {
+            i++;
+        }
+
+        closedir(dp);
+        if (i <= 2) {
+            return STATUS_EMPTY;
+        } else {
+            return STATUS_OK;
+        }
+    }
+
+    return -1;
+}
+
+string read_score_file(string filename)
+{
+    std::ifstream file(filename);
+    string score;
+    std::getline(file, score);
+    return score;
+}
+
+string get_scores()
+{
+    std::vector<string> result;
+    string scoreboard = "";
+    struct dirent** filelist;
+    int n_entries, i_file;
+    char f_name[50];
+    n_entries = scandir("SCORES/", &filelist, 0, alphasort);
+    int counter = 1;
+
+    while (n_entries--) {
+        if (filelist[n_entries]->d_name[0] != '.') {
+            if (counter == 11) {
+                break;
+            }
+
+            sprintf(f_name, "SCORES/%s", filelist[n_entries]->d_name);
+            string score_file = read_score_file((string)f_name);
+            std::stringstream ss(score_file);
+            string word;
+            int size;
+            if (counter < 10) {
+                scoreboard += " ";
+            }
+
+            scoreboard += std::to_string(counter);
+            counter++;
+            scoreboard += " - ";
+            ss >> word;
+            scoreboard += word;
+
+            for (int k = 0; k < (5 - word.length()); k++) {
+                scoreboard += " ";
+            }
+
+            ss >> word;
+            scoreboard += word + "  ";
+            ss >> word;
+            size = 39 - word.length();
+            scoreboard += word;
+
+            for (int j = 0; j < size; j++) {
+                scoreboard += " ";
+            }
+
+            ss >> word;
+            scoreboard += word + "              ";
+
+            if (word.length() == 1) {
+                scoreboard += " ";
+            }
+
+            ss >> word;
+            scoreboard += word + "\n";
+        }
+    }
+    return scoreboard;
+}
+
+char* get_new_name(char* code)
+{
+    time_t rawtime;
+    tm* timeinfo;
+    char* buffer = new char[80];
+
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+
+    strftime(buffer, 80, "/%Y%m%d_%H%M%S", timeinfo);
+    strcat(buffer, "_");
+    strcat(buffer, code);
+    strcat(buffer, ".txt");
+
+    return buffer;
 }
 
 void end_current_game(char* PLID, char* code)
@@ -225,6 +318,31 @@ void end_current_game(char* PLID, char* code)
     system(command);
 
     return;
+}
+
+string find_last_game(char* PLID){
+    struct dirent **filelist;
+    int n_entries,found;
+    char dirname[20];
+    char dir[40];
+
+    sprintf(dirname,"GAMES/%s/",PLID);
+    n_entries = scandir(dirname,&filelist,0,alphasort);
+    found = 0;
+
+    while (n_entries--){
+        if (filelist[n_entries]->d_name[0]!='.'){
+            sprintf(dir,"GAMES/%s/%s/",PLID,filelist[n_entries]->d_name);
+            found = 1;
+        }
+        free(filelist[n_entries]);
+        if(found){
+            break;
+        }
+    }
+    free(filelist);
+    return (string)dir;
+
 }
 
 char* get_player_word(char* PLID)
@@ -389,6 +507,11 @@ void add_trial(char* PLID, char* trial, char* code)
     }
 }
 
+
+
+
+
+
 int check_completion(char* PLID, char* play)
 {
     string code, state;
@@ -461,6 +584,32 @@ int check_dup(char* PLID, char* play)
             if (code == "T") {
                 stream_line >> letter;
                 if (!strcmp(play, letter.c_str())) {
+                    game.close();
+                    return 1;
+                }
+            }
+        }
+        game.close();
+        return 0;
+    }
+    return -1;
+}
+
+int check_word_dup(char* PLID,char* guess){
+    char* game_user_dir = create_user_game_dir(PLID);
+    string code, word;
+    std::ifstream game;
+    game.open(game_user_dir);
+
+    if (game.is_open()) {
+        string line;
+
+        while (std::getline(game, line)) {
+            std::stringstream stream_line(line);
+            stream_line >> code;
+            if (code == "G") {
+                stream_line >> word;
+                if (!strcmp(guess, word.c_str())) {
                     game.close();
                     return 1;
                 }
@@ -617,6 +766,35 @@ int check_guess_status(char* PLID, char* guess, int trials)
     }
 }
 
+int check_image(char* PLID)
+{
+    char* game_user_dir = create_user_game_dir(PLID);
+    if (!check_PLID(PLID) || !check_ongoing_game(game_user_dir)) {
+        return STATUS_NOK;
+    }
+
+    string line, hint_file, path;
+
+    std::ifstream game(game_user_dir);
+    std::getline(game, line);
+    std::stringstream ss(line);
+    ss >> path;
+    ss >> hint_file;
+
+    path = "HINTS/" + hint_file;
+
+    std::ifstream file;
+    file.open(path);
+
+    if (file.is_open()) {
+        file.close();
+        return STATUS_OK;
+    } else {
+        return STATUS_NOK;
+    }
+    return 1;
+}
+
 int get_errors(char* PLID)
 {
     string code, state;
@@ -641,4 +819,150 @@ int get_errors(char* PLID)
         return errors;
     }
     return -1;
+}
+
+int check_current_state(char* PLID){
+    char* user_dir = create_user_dir(PLID);
+    if (!check_PLID(PLID) || !user_exists(user_dir)) {
+        return STATUS_NOK;
+    }
+
+    else {
+        char* game_user_dir = create_user_game_dir(PLID);
+        if (check_ongoing_game(game_user_dir)){
+            return STATUS_ACT;
+        }
+        else {
+            return STATUS_FIN;
+        }
+    }
+
+}
+
+string get_last_state(char* PLID){
+    string state,line,word;
+    string aux = "";
+    int count = 0;
+    state = "Last finalized game for player " + (string)PLID;
+    state += "\n";
+    string last_path = find_last_game(PLID);
+    last_path.pop_back();
+    std::ifstream game(last_path);
+    std::getline(game,line);
+    std::stringstream ss(line);
+    ss >> word;
+    state += "     Word: " + word + "; Hint file: ";
+    ss >> word;
+    state += word;
+    state += "\n";
+    while (game) {
+        count++;
+        std::getline(game, line);
+        if (line == ""){
+            break;
+        }
+        std::stringstream stream(line);
+        stream >> word;
+        if (word == "T"){
+            aux += "     Letter trial: ";
+            stream >> word;
+            aux += word + " - ";
+            stream >> word;
+            if (word == "OK"){
+                aux += "TRUE\n";
+            }
+            else{
+                aux += "FALSE\n";
+            }
+        }
+        else if (word == "G"){
+            aux += "     Word guess: ";
+            stream >> word;
+            aux += word;
+            aux += "\n";
+        }
+        else if (word == "WIN" || word == "FAIL" || word == "QUIT"){
+            if (count == 1){
+                state += "     Game started - no transactions found\n";
+                state += "     Termination: QUIT\n";
+                break;
+            }
+            aux += "     Termination: " + word;
+            aux += "\n";
+        }
+    }
+    if (count != 1){
+        state += "     --- Transactions found: " + std::to_string(count-2) + " ---\n";
+    }
+
+    return state + aux;
+
+}
+
+string get_active_state(char* PLID){
+    string state,line,word,positions;
+    string aux = "";
+    int count = 0;
+    int size = get_word_size(PLID);
+    int n_pos,pos;
+    char* hidden = new char[size];
+    char letter;
+    for (int i = 0; i < size; i++){
+        hidden[i] = '-';
+    }
+    state = "Active game found for player " + (string)PLID;
+    state += "\n";
+    char* game_user_dir = create_user_game_dir(PLID);
+
+    std::ifstream game(game_user_dir);
+    std::getline(game,line);
+    while (game) {
+        count++;
+        std::getline(game, line);
+        if (line == ""){
+            break;
+        }
+        std::stringstream stream(line);
+        stream >> word;
+        if (word == "T"){
+            aux += "     Letter trial: ";
+            stream >> letter;
+            aux += letter;
+            aux += " - ";
+            stream >> word;
+            if (word == "OK"){
+                aux += "TRUE\n";
+                positions = get_letter_positions(PLID,&letter);
+                std::stringstream pos_aux(positions);
+                pos_aux >> n_pos;
+                for (int i = 0; i < n_pos; i++){
+                    pos_aux >> pos;
+                    hidden[pos-1] = letter;
+                }
+            }
+            else{
+                aux += "FALSE\n";
+            }
+        }
+        else if (word == "G"){
+            aux += "     Word guess: ";
+            stream >> word;
+            aux += word;
+            aux += "\n";
+        }
+    }
+    if (count == 1){
+        state += "     Game started - no transactions found\n";
+    }
+    else{
+        state += "     --- Transactions found: " + std::to_string(count-1) + " ---\n";
+    }
+    state += aux;
+    state += "     Solved so far: ";
+    for (int i = 0; i < size; i++){
+        state += hidden[i];
+    }
+    delete[] hidden;
+    state += "\n";
+    return state;
 }

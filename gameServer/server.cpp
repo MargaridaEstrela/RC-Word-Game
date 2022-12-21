@@ -39,9 +39,12 @@ struct sigaction oldact;
 pid_t udp_pid;
 pid_t tcp_pid;
 
+
 // FUNCTIONS
 void decoder(int argc, char* argv[]);
 void sig_handler(int sig);
+
+
 
 void decoder(int argc, char* argv[])
 {

@@ -33,10 +33,23 @@ string PLID = "";
 int n_letters;
 char* guessed;
 
-// FUNCTIONS
 
-/* Function responsible for the decoding of the player
-   application execution command (./player [-n GSIP] [-p GSport]).*/
+
+// FUNCTIONS
+void flag_decoder();
+int TCP_read_to_file();
+string TCP_send_receive();
+string UDP_send_receive();
+void disconnect();
+int error_check();
+
+
+
+
+/* 
+ * Function responsible for the decoding of the player
+ * application execution command (./player [-n GSIP] [-p GSport]).
+ */
 void flag_decoder(int argc, char* argv[])
 {
     // No flags used
@@ -62,14 +75,17 @@ void flag_decoder(int argc, char* argv[])
     return;
 }
 
-/* Function responsible for reading the data sent through TCP to a file
-   (commands scoreboard, hint and state)
-   - fd : Socket file descriptor;
-   - filename : name of local file to be written;
-   - byte_size : size of data to be read;
-   - prefix : piece of data read in function TCP_send_receive that is not
-     part of the status message;
-   - returns 0 in case of success, -1 in failure  */
+
+/* 
+ * Function responsible for reading the data sent through TCP to a file
+ * (commands scoreboard, hint and state)
+ * - fd : Socket file descriptor;
+ * - filename : name of local file to be written;
+ * - byte_size : size of data to be read;
+ * - prefix : piece of data read in function TCP_send_receive that is not
+ *   part of the status message;
+ *   - returns 0 in case of success, -1 in failure  
+ */
 int TCP_read_to_file(int fd, string filename, int byte_size, string prefix)
 {
 
@@ -103,12 +119,14 @@ int TCP_read_to_file(int fd, string filename, int byte_size, string prefix)
     return 0;
 }
 
-/* Function responsible for sending requests and
-   receiving responses from the server, through
-   TCP protocol
-   - message : Message to be sent to server;
-   - returns file descriptor for socket and the response
-     (in a unified string) in success, returns ERR_TCP in failure */
+
+/* 
+ * Function responsible for sending requests and receiving responses from the server, 
+ * through TCP protocol
+ * - message : Message to be sent to server;
+ * - returns file descriptor for socket and the response
+ * (in a unified string) in success, returns ERR_TCP in failure 
+ */
 string TCP_send_receive(string message)
 {
     int fd, errcode;
@@ -176,12 +194,14 @@ string TCP_send_receive(string message)
     return to_string(fd) + " " + response;
 }
 
-/* Function responsible for sending requests and
-   receiving responses from the server, through
-   UDP protocol
-   - message : Message to be sent to server;
-   - returns response in success, returns ERR_UDP in failure,
-     returns ERR_LOST in case of timeout (loss of message) */
+
+/* 
+ * Function responsible for sending requests and
+ * receiving responses from the server, through UDP protocol
+ * - message : Message to be sent to server;
+ * - returns response in success, returns ERR_UDP in failure,
+ * returns ERR_LOST in case of timeout (loss of message) 
+ */
 string UDP_send_receive(string message)
 {
     int fd, errcode;
@@ -258,9 +278,12 @@ string UDP_send_receive(string message)
     return response;
 }
 
-/* Function responsible for requesting the server for
-   game termination, as well as handling the server
-   response. */
+
+/* 
+ * Function responsible for requesting the server for
+ * game termination, as well as handling the server
+ * response. 
+ */
 void disconnect()
 {
     cout << "Requesting server for game termination...\n"; // Only actually requests server if a game is currently active
@@ -319,12 +342,14 @@ void disconnect()
     }
 }
 
-/* Function responsible for checking for errors
-   in the first word of the response, received
-   from the server and interpreted by the functions above
-   - code : first word of the message received;
-   - protocol : the correct word that should be received for the specific command
-   - returns 0 with success, -1 if an error is detected */
+
+/* 
+ * Function responsible for checking for errors in the first word of the response, received
+ * from the server and interpreted by the functions above
+ * - code : first word of the message received;
+ * - protocol : the correct word that should be received for the specific command
+ * - returns 0 with success, -1 if an error is detected 
+ *   */
 int error_check(string code, string protocol)
 {
     if (code == ERR_UDP) {
@@ -362,10 +387,13 @@ int error_check(string code, string protocol)
     }
 }
 
+
 // COMMANDS
 
-/* Requests server for game start and interprets its response
-   - ID : PLID sent by the user in the command */
+/* 
+ * Requests server for game start and interprets its response
+ * - ID : PLID sent by the user in the command 
+ */
 void start_command(string ID)
 {
     if (ID == "") {
@@ -436,9 +464,11 @@ void start_command(string ID)
     return;
 }
 
-/* Requests server to accept a letter for the game word
-   and interprets its response
-   - letter : letter guessed by the player */
+
+/* 
+ * Requests server to accept a letter for the game word and interprets its response
+ * - letter : letter guessed by the player 
+ *   */
 void play_command(string letter)
 {
     if (letter == "") {
@@ -542,13 +572,14 @@ void play_command(string letter)
         break;
     }
     }
-
     return;
 }
 
-/* Requests server to accept a word to be guessed and
-   interprets its response
-   - guess : word guessed by the player */
+
+/* 
+ * Requests server to accept a word to be guessed and interprets its response
+ * - guess : word guessed by the player 
+ */
 void guess_command(string guess)
 {
     if (guess == "") {
@@ -605,6 +636,11 @@ void guess_command(string guess)
         cerr << "ERROR: The 'guess' command was rejected by the server. No game must be active or word isn't valid (3-30 letters long)\n";
         break;
     }
+    case STATUS_DUP: {
+        n_trials--;
+        cerr << "ERROR: The guess "" + guess + "" has already been sent before. Try another word\n";
+        break;
+    }
     default: {
         cerr << "ERROR: Wrong Protocol Message Received. Terminating connection...\n";
         n_trials--;
@@ -617,7 +653,10 @@ void guess_command(string guess)
     return;
 }
 
-/* Requests server for the top scores scoreboard and interprets its response */
+
+/* 
+ * Requests server for the top scores scoreboard and interprets its response 
+ */
 void scoreboard_command()
 {
     // Sending request and reading response
@@ -682,8 +721,10 @@ void scoreboard_command()
     return;
 }
 
-/* Requests server for a hint image of the current game
-   and interprets its response */
+
+/* 
+ * Requests server for a hint image of the current game and interprets its response 
+ */
 void hint_command()
 {
     // Sending request and reading response
@@ -743,8 +784,10 @@ void hint_command()
     return;
 }
 
-/* Requests server for the state of the current or last finished game
-   and interprets its response */
+
+/* 
+ * Requests server for the state of the current or last finished game and interprets its response 
+ */
 void state_command()
 {
     // Sending request and reading response
@@ -816,8 +859,10 @@ void state_command()
     return;
 }
 
-/* Infinite loop that reads commands and redirects them to
-   the right function to be handled */
+
+/* 
+ * Infinite loop that reads commands and redirects them to the right function to be handled 
+ */
 int main(int argc, char* argv[])
 {
 

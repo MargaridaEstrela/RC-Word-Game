@@ -40,12 +40,14 @@ char* word;
 bool verbose;
 int status;
 
+
 // FUNCTIONS
-void setup_udp(void);
-int max_errors(int word_size);
-void process(void);
-void end_UDP_session(void);
+void setup_udp();
+void process();
+void end_UDP_session();
 void sig_handler(int sig);
+
+
 
 void setup_udp(void)
 {
@@ -274,6 +276,11 @@ void process(void)
                     sprintf(trial_line, "G %s ", arg3);
                     add_trial(arg2, trial_line, "NOK");
                 }
+                break;
+            }
+            case STATUS_DUP: {
+                verb_response += "Fail; word "" + (string)arg3 +"" has already been sent before; no play is registed\n";
+                response = "RWG DUP " + std::to_string(trial) + "\n";
                 break;
             }
             case STATUS_ERR:

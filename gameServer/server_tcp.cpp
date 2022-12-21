@@ -23,6 +23,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <vector>
+#include <signal.h>
 
 using string = std::string;
 
@@ -38,10 +39,25 @@ struct addrinfo hints, *res;
 struct sockaddr_in addr;
 socklen_t addrlen;
 
+struct sigaction oldact;
+
+
 // FUNCTIONS
+void setup_tcp();
+string create_scoreboard();
+string get_hint_filename();
+int get_hint_fileI();
+void process();
+void end_TCP_session();
+void sig_handler(int sig);
+
+
+
+
 void setup_tcp(void)
 {
     int errcode;
+    struct sigaction sig_action;
     fd = socket(AF_INET, SOCK_STREAM, 0);
 
     if (fd < 0) {
@@ -69,96 +85,14 @@ void setup_tcp(void)
         perror("listen failed");
         exit(1);
     }
-}
 
-int check_score_file()
-{
-    DIR* dp;
-    int i = 0;
-    struct dirent* ep;
-    dp = opendir(SCORES_DIR);
+    // setup SIGINT action
+    memset(&sig_action, 0, sizeof(sig_action));
+    sig_action.sa_handler = &sig_handler;
+    sigemptyset(&sig_action.sa_mask);
+    sig_action.sa_flags = 0;
 
-    if (dp != NULL) {
-        while (ep = readdir(dp)) {
-            i++;
-        }
-
-        closedir(dp);
-        if (i <= 2) {
-            return STATUS_EMPTY;
-        } else {
-            return STATUS_OK;
-        }
-    }
-
-    return -1;
-}
-
-string read_score_file(string filename)
-{
-    std::ifstream file(filename);
-    string score;
-    std::getline(file, score);
-    return score;
-}
-
-string get_scores()
-{
-    std::vector<string> result;
-    string scoreboard = "";
-    struct dirent** filelist;
-    int n_entries, i_file;
-    char f_name[50];
-    n_entries = scandir("SCORES/", &filelist, 0, alphasort);
-    int counter = 1;
-
-    while (n_entries--) {
-        if (filelist[n_entries]->d_name[0] != '.') {
-            if (counter == 11) {
-                break;
-            }
-
-            sprintf(f_name, "SCORES/%s", filelist[n_entries]->d_name);
-            string score_file = read_score_file((string)f_name);
-            std::stringstream ss(score_file);
-            string word;
-            int size;
-            if (counter < 10) {
-                scoreboard += " ";
-            }
-
-            scoreboard += std::to_string(counter);
-            counter++;
-            scoreboard += " - ";
-            ss >> word;
-            scoreboard += word;
-
-            for (int k = 0; k < (5 - word.length()); k++) {
-                scoreboard += " ";
-            }
-
-            ss >> word;
-            scoreboard += word + "  ";
-            ss >> word;
-            size = 39 - word.length();
-            scoreboard += word;
-
-            for (int j = 0; j < size; j++) {
-                scoreboard += " ";
-            }
-
-            ss >> word;
-            scoreboard += word + "              ";
-
-            if (word.length() == 1) {
-                scoreboard += " ";
-            }
-
-            ss >> word;
-            scoreboard += word + "\n";
-        }
-    }
-    return scoreboard;
+    sigaction(SIGINT, &sig_action, &oldact);
 }
 
 string create_scoreboard()
@@ -187,35 +121,6 @@ string create_scoreboard()
     return scoreboard;
 }
 
-int check_image(char* PLID)
-{
-    char* game_user_dir = create_user_game_dir(PLID);
-    if (!check_PLID(PLID) || !check_ongoing_game(game_user_dir)) {
-        return STATUS_NOK;
-    }
-
-    string line, hint_file, path;
-
-    std::ifstream game(game_user_dir);
-    std::getline(game, line);
-    std::stringstream ss(line);
-    ss >> path;
-    ss >> hint_file;
-
-    path = "HINTS/" + hint_file;
-
-    std::ifstream file;
-    file.open(path);
-
-    if (file.is_open()) {
-        file.close();
-        return STATUS_OK;
-    } else {
-        return STATUS_NOK;
-    }
-    return 1;
-}
-
 string get_hint_filename(char* PLID)
 {
 
@@ -230,14 +135,12 @@ string get_hint_filename(char* PLID)
 }
 
 
-
 int get_hint_file(char* PLID)
 {
 
     string line, path;
     string hint_file = "";
     char* game_user_dir = create_user_game_dir(PLID);
-    char c;
 
     std::ifstream game(game_user_dir);
     std::getline(game, line);
@@ -276,180 +179,6 @@ int get_hint_file(char* PLID)
 
 
 
-int check_current_state(char* PLID){
-    char* user_dir = create_user_dir(PLID);
-    if (!check_PLID(PLID) || !user_exists(user_dir)) {
-        return STATUS_NOK;
-    }
-
-    else {
-        char* game_user_dir = create_user_game_dir(PLID);
-        if (check_ongoing_game(game_user_dir)){
-            return STATUS_ACT;
-        }
-        else {
-            return STATUS_FIN;
-        }
-    }
-
-}
-
-
-string find_last_game(char* PLID){
-    struct dirent **filelist;
-    int n_entries,found;
-    char dirname[20];
-    char dir[40];
-
-    sprintf(dirname,"GAMES/%s/",PLID);
-    n_entries = scandir(dirname,&filelist,0,alphasort);
-    found = 0;
-
-    while (n_entries--){
-        if (filelist[n_entries]->d_name[0]!='.'){
-            sprintf(dir,"GAMES/%s/%s/",PLID,filelist[n_entries]->d_name);
-            found = 1;
-        }
-        free(filelist[n_entries]);
-        if(found){
-            break;
-        }
-    }
-    free(filelist);
-    return (string)dir;
-
-}
-
-string get_last_state(char* PLID){
-    string state,line,word;
-    string aux = "";
-    int count = 0;
-    state = "Last finalized game for player " + (string)PLID;
-    state += "\n";
-    string last_path = find_last_game(PLID);
-    last_path.pop_back();
-    std::ifstream game(last_path);
-    std::getline(game,line);
-    std::stringstream ss(line);
-    ss >> word;
-    state += "     Word: " + word + "; Hint file: ";
-    ss >> word;
-    state += word;
-    state += "\n";
-    while (game) {
-        count++;
-        std::getline(game, line);
-        if (line == ""){
-            break;
-        }
-        std::stringstream stream(line);
-        stream >> word;
-        if (word == "T"){
-            aux += "     Letter trial: ";
-            stream >> word;
-            aux += word + " - ";
-            stream >> word;
-            if (word == "OK"){
-                aux += "TRUE\n";
-            }
-            else{
-                aux += "FALSE\n";
-            }
-        }
-        else if (word == "G"){
-            aux += "     Word guess: ";
-            stream >> word;
-            aux += word;
-            aux += "\n";
-        }
-        else if (word == "WIN" || word == "FAIL" || word == "QUIT"){
-            if (count == 1){
-                state += "     Game started - no transactions found\n";
-                state += "     Termination: QUIT\n";
-                break;
-            }
-            aux += "     Termination: " + word;
-            aux += "\n";
-        }
-    }
-    if (count != 1){
-        state += "     --- Transactions found: " + std::to_string(count-2) + " ---\n";
-    }
-
-    return state + aux;
-
-}
-
-string get_active_state(char* PLID){
-    string state,line,word,positions;
-    string aux = "";
-    int count = 0;
-    int size = get_word_size(PLID);
-    int n_pos,pos;
-    char* hidden = new char[size];
-    char letter;
-    for (int i = 0; i < size; i++){
-        hidden[i] = '-';
-    }
-    state = "Active game found for player " + (string)PLID;
-    state += "\n";
-    char* game_user_dir = create_user_game_dir(PLID);
-
-    std::ifstream game(game_user_dir);
-    std::getline(game,line);
-    while (game) {
-        count++;
-        std::getline(game, line);
-        if (line == ""){
-            break;
-        }
-        std::stringstream stream(line);
-        stream >> word;
-        if (word == "T"){
-            aux += "     Letter trial: ";
-            stream >> letter;
-            aux += letter;
-            aux += " - ";
-            stream >> word;
-            if (word == "OK"){
-                aux += "TRUE\n";
-                positions = get_letter_positions(PLID,&letter);
-                std::stringstream pos_aux(positions);
-                pos_aux >> n_pos;
-                for (int i = 0; i < n_pos; i++){
-                    pos_aux >> pos;
-                    hidden[pos-1] = letter;
-                }
-            }
-            else{
-                aux += "FALSE\n";
-            }
-        }
-        else if (word == "G"){
-            aux += "     Word guess: ";
-            stream >> word;
-            aux += word;
-            aux += "\n";
-        }
-    }
-    if (count == 1){
-        state += "     Game started - no transactions found\n";
-    }
-    else{
-        state += "     --- Transactions found: " + std::to_string(count-1) + " ---\n";
-    }
-    state += aux;
-    state += "     Solved so far: ";
-    for (int i = 0; i < size; i++){
-        state += hidden[i];
-    }
-    delete[] hidden;
-    state += "\n";
-    return state;
-}
-
-
-
 void process(void)
 {
     std::cout << "Start TCP Process" << std::endl;
@@ -457,7 +186,6 @@ void process(void)
     char request[MAX_TCP_READ];
     string response;
     string verb_response;
-    pid_t child_pid;
 
     while (1) {
         addrlen = sizeof(addr);
@@ -478,8 +206,6 @@ void process(void)
 
             char* arg1 = new char[MAX_COMMAND_LINE];
             char* arg2 = new char[MAX_COMMAND_LINE];
-            char* arg3 = new char[MAX_COMMAND_LINE];
-            char* arg4 = new char[MAX_COMMAND_LINE];
 
             sscanf(request, "%s %s", arg1, arg2);
 
@@ -609,6 +335,19 @@ void end_TCP_session(void)
     freeaddrinfo(res);
     close(fd);
 }
+
+
+void sig_handler(int sig)
+{
+    std::cout << "Caught Ctrl-C..." << std::endl;
+
+    end_TCP_session();
+    sigaction(SIGINT, &oldact, NULL);
+    kill(0, SIGINT);
+
+    return;
+}
+
 
 int main(int argc, char* argv[])
 {
