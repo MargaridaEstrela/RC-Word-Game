@@ -279,7 +279,7 @@ void process(void)
                 break;
             }
             case STATUS_DUP: {
-                verb_response += "Fail; word "" + (string)arg3 +"" has already been sent before; no play is registed\n";
+                verb_response += "Fail; word \"" + (string)arg3 +"\" has already been sent before; no play is registed\n";
                 response = "RWG DUP " + std::to_string(trial) + "\n";
                 break;
             }

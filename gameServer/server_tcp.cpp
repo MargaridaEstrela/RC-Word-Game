@@ -320,6 +320,7 @@ void process(void)
             }
 
             close(new_fd);
+            exit(EXIT_SUCCESS);
         }
         else {
             close(new_fd);

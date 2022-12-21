@@ -638,7 +638,7 @@ void guess_command(string guess)
     }
     case STATUS_DUP: {
         n_trials--;
-        cerr << "ERROR: The guess "" + guess + "" has already been sent before. Try another word\n";
+        cerr << "ERROR: The guess \"" + guess + "\" has already been sent before. Try another word\n";
         break;
     }
     default: {

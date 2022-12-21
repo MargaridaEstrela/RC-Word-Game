@@ -760,7 +760,12 @@ int check_guess_status(char* PLID, char* guess, int trials)
     if (!check_PLID(PLID) || !check_ongoing_game(user_game_dir)) {
         return STATUS_ERR;
     } else if (trials == get_trials(PLID)) {
-        return check_word(PLID, guess);
+        if (check_word_dup(PLID,guess)){
+            return STATUS_DUP;
+        }
+        else {
+            return check_word(PLID,guess);
+        }
     } else {
         return STATUS_INV;
     }
