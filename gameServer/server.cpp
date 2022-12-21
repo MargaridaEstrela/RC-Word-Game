@@ -41,7 +41,7 @@ pid_t tcp_pid;
 
 // FUNCTIONS
 void decoder(int argc, char* argv[]);
-void ctrl_c_handler(int sig);
+void sig_handler(int sig);
 
 void decoder(int argc, char* argv[])
 {
@@ -95,19 +95,19 @@ int main(int argc, char* argv[])
     mkdir(SCORES_DIR, 0777);
 
     udp_pid = fork();
-    tcp_pid = fork();
+    //tcp_pid = fork();
 
     if (udp_pid == 0) {
         execl("./server_udp", "server_udp", word, GSPORT.c_str(), verbose.c_str(), NULL);
-        std::cerr << "ERROR UDP: cannot execute UDP server\n";
+        std::cerr << "ERROR: cannot execute UDP server\n";
         exit(EXIT_FAILURE);
-    } else if (udp_pid == -1 || tcp_pid == -1) {
-        exit(EXIT_FAILURE);
-    } else if (tcp_pid == 0){
+    } 
+
+    else {
         execl("./server_tcp", "server_tcp", word, GSPORT.c_str(), verbose.c_str(), NULL);
-        std::cerr << "ERROR TCP: cannot execute TCP server\n";
+        std::cerr << "ERROR: cannot execute TCP server\n";
         exit(EXIT_FAILURE);
-    }
+    } 
 
     // setup SIGINT action
     memset(&sig_action, 0, sizeof(sig_action));

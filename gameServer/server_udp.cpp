@@ -55,7 +55,7 @@ void setup_udp(void)
     fd = socket(AF_INET, SOCK_DGRAM, 0);
 
     if (fd < 0) {
-        perror("UPD: socket failed");
+        perror("socket failed");
         exit(1);
     }
 
@@ -71,7 +71,7 @@ void setup_udp(void)
 
     n = bind(fd, (const struct sockaddr*)res->ai_addr, res->ai_addrlen);
     if (n < 0) {
-        perror("UDP: bind failed");
+        perror("bind failed");
         exit(1);
     }
 
@@ -88,7 +88,7 @@ void setup_udp(void)
 
 void process(void)
 {
-    std::cout << "start process" << std::endl;
+    std::cout << "Start UDP Process" << std::endl;
 
     char request[MAX_COMMAND_LINE];
     string response;
@@ -162,7 +162,7 @@ void process(void)
 
             switch (status) {
             case STATUS_OK: {
-                verb_response += "Success; \"" + (string)arg3 + "\" is part of the word; word not guessed\n";
+                verb_response += "Success; \"" + (string)arg3 + "\" is part of the word; word not ed\n";
                 char* trial_line = (char*)calloc(strlen(arg3) + 3, sizeof(char));
                 sprintf(trial_line, "T %s ", arg3);
                 add_trial(arg2, trial_line, "OK");
@@ -171,7 +171,7 @@ void process(void)
                 break;
             }
             case STATUS_WIN: {
-                verb_response += "Success; \"" + (string)arg3 + "\" is part of the word; word was guessed (game ended)\n";
+                verb_response += "Success; \"" + (string)arg3 + "\" is part of the word; word was ed (game ended)\n";
                 response = "RLG WIN " + (string)arg4 + "\n";
                 char* trial_line = (char*)calloc(strlen(arg3) + 3, sizeof(char));
                 sprintf(trial_line, "T %s ", arg3);
@@ -207,7 +207,7 @@ void process(void)
                     verb_response += "Error; trial number doesn't match; \"" + (string)arg3 + "\" may not be the last played letter \n";
                     response = "RLG INV " + std::to_string(trial) + "\n";
                 } else if (last == STATUS_OK) {
-                    verb_response += "Success; lost message re-sent; \"" + (string)arg3 + "\" is part of the word; word not guessed\n";
+                    verb_response += "Success; lost message re-sent; \"" + (string)arg3 + "\" is part of the word; word not ed\n";
                     string pos = get_letter_positions(arg2, arg3);
                     response = "RLG OK " + string(arg4) + " " + pos + "\n";
                 } else if (last == STATUS_NOK) {
@@ -225,14 +225,14 @@ void process(void)
 
         } else if (!strcmp(arg1, "PWG")) {
 
-            verb_response += "Guess word -> ";
+            verb_response += " word -> ";
 
             status = check_guess_status(arg2, arg3, atoi(arg4));
             int trial = get_trials(arg2);
 
             switch (status) {
             case STATUS_WIN: {
-                verb_response += "Success; word \"" + (string)arg3 + "\" was the correct guess (game ended)\n";
+                verb_response += "Success; word \"" + (string)arg3 + "\" was the correct  (game ended)\n";
                 response = "RWG WIN " + (string)arg4 + "\n";
                 char* trial_line = (char*)calloc(strlen(arg3) + 3, sizeof(char));
                 sprintf(trial_line, "G %s ", arg3);
@@ -241,7 +241,7 @@ void process(void)
                 break;
             }
             case STATUS_NOK: {
-                verb_response += "Fail; word \"" + (string)arg3 + "\" was not the correct guess\n";
+                verb_response += "Fail; word \"" + (string)arg3 + "\" was not the correct \n";
                 response = "RWG NOK " + (string)arg4 + "\n";
                 char* trial_line = (char*)calloc(strlen(arg3) + 3, sizeof(char));
                 sprintf(trial_line, "G %s ", arg3);
@@ -249,7 +249,7 @@ void process(void)
                 break;
             }
             case STATUS_OVR: {
-                verb_response += "Fail; word \"" + (string)arg3 + "\" was not the correct guess; max error limit reached (game ended)\n";
+                verb_response += "Fail; word \"" + (string)arg3 + "\" was not the correct ; max error limit reached (game ended)\n";
                 response = "RWG OVR " + (string)arg4 + "\n";
                 char* trial_line = (char*)calloc(strlen(arg3) + 3, sizeof(char));
                 sprintf(trial_line, "G %s ", arg3);
@@ -260,7 +260,7 @@ void process(void)
             case STATUS_INV: {
                 int last = check_last_played(arg2, arg3, "G");
                 if (last == 0) {
-                    verb_response += "Error; trial number doesn't match; \"" + (string)arg3 + "\" may not be the last word guessed\n";
+                    verb_response += "Error; trial number doesn't match; \"" + (string)arg3 + "\" may not be the last word ed\n";
                     response = "RLG INV " + std::to_string(trial) + "\n";
                 } else if (last == 1) {
                     char* trial_line = (char*)calloc(strlen(arg3) + 3, sizeof(char));
@@ -284,7 +284,7 @@ void process(void)
 
         } else if (!strcmp(arg1, "QUT")) {
 
-            verb_response += "Guess current game -> ";
+            verb_response += "Quit current game -> ";
 
             char* user_dir = create_user_dir(arg2);
 
@@ -348,15 +348,11 @@ void sig_handler(int sig)
 
 int main(int argc, char* argv[])
 {
-    std::cout << "Start UDP socket..." << std::endl;
     word = new char[sizeof(argv[1])];
     word = argv[1];
     GSPORT = new char[sizeof(argv[2])];
     GSPORT = argv[2];
     char* v = argv[3];
-    std::cout << word;
-    std::cout << GSPORT;
-    std::cout << v;
 
     if (!strcmp(v, "YES")) {
         verbose = true;

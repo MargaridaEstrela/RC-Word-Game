@@ -1,5 +1,5 @@
-#include "../constants.hpp"
 #include "../aux_functions.hpp"
+#include "../constants.hpp"
 
 #include <algorithm>
 #include <arpa/inet.h>
@@ -25,7 +25,7 @@ using namespace std;
 
 // GLOBAL VARIABLES
 string GSIP = "127.0.0.1"; // Default server IP (local host)
-string GSPORT = "58034";   // Default Port
+string GSPORT = "58034"; // Default Port
 
 // Session and Game state variables
 int n_trials = -1;
@@ -33,9 +33,7 @@ string PLID = "";
 int n_letters;
 char* guessed;
 
-
 // FUNCTIONS
-
 
 /* Function responsible for the decoding of the player
    application execution command (./player [-n GSIP] [-p GSport]).*/
@@ -45,7 +43,7 @@ void flag_decoder(int argc, char* argv[])
     if (argc == 1) {
         return;
     }
-    // Flag handling 
+    // Flag handling
     else if (argc == 3 || argc == 5) {
         for (int i = 1; i < argc; i += 2) {
             if (string(argv[i]) == "-n") {
@@ -64,12 +62,12 @@ void flag_decoder(int argc, char* argv[])
     return;
 }
 
-/* Function responsible for reading the data sent through TCP to a file 
+/* Function responsible for reading the data sent through TCP to a file
    (commands scoreboard, hint and state)
    - fd : Socket file descriptor;
    - filename : name of local file to be written;
    - byte_size : size of data to be read;
-   - prefix : piece of data read in function TCP_send_receive that is not 
+   - prefix : piece of data read in function TCP_send_receive that is not
      part of the status message;
    - returns 0 in case of success, -1 in failure  */
 int TCP_read_to_file(int fd, string filename, int byte_size, string prefix)
@@ -178,7 +176,6 @@ string TCP_send_receive(string message)
     return to_string(fd) + " " + response;
 }
 
-
 /* Function responsible for sending requests and
    receiving responses from the server, through
    UDP protocol
@@ -261,11 +258,10 @@ string UDP_send_receive(string message)
     return response;
 }
 
-
 /* Function responsible for requesting the server for
    game termination, as well as handling the server
    response. */
-void disconnect() 
+void disconnect()
 {
     cout << "Requesting server for game termination...\n"; // Only actually requests server if a game is currently active
     if (n_trials > -1) {
@@ -279,8 +275,8 @@ void disconnect()
         if (word == ERR_UDP) {
             cerr << "ERROR: System call for UDP message or reception has failed while trying to end current game. Terminating app...\n";
             exit(EXIT_FAILURE);
-        } 
-        
+        }
+
         else if (word == ERR_LOST) {
             while (word == ERR_LOST) {
                 cout << "Because message was lost during disconnect, another request will be automatically sent again\n";
@@ -307,7 +303,7 @@ void disconnect()
             cout << "No ongoing game has been found\n";
         }
 
-        else if (word == "ERR"){
+        else if (word == "ERR") {
             cerr << "ERROR: Server responded with error while trying to end current game. Terminating app...\n";
             exit(EXIT_FAILURE);
         }
@@ -322,7 +318,6 @@ void disconnect()
         cout << "No ongoing game at the moment\n";
     }
 }
-
 
 /* Function responsible for checking for errors
    in the first word of the response, received
@@ -367,13 +362,11 @@ int error_check(string code, string protocol)
     }
 }
 
-
 // COMMANDS
-
 
 /* Requests server for game start and interprets its response
    - ID : PLID sent by the user in the command */
-void start_command(string ID) 
+void start_command(string ID)
 {
     if (ID == "") {
         cerr << "ERROR: No PLID was given\n";
@@ -403,7 +396,7 @@ void start_command(string ID)
     rr >> word;
     string output;
     int status = translate_status(word);
-  
+
     // Status switch case
     switch (status) {
     case STATUS_OK: {
@@ -443,8 +436,7 @@ void start_command(string ID)
     return;
 }
 
-
-/* Requests server to accept a letter for the game word 
+/* Requests server to accept a letter for the game word
    and interprets its response
    - letter : letter guessed by the player */
 void play_command(string letter)
@@ -554,7 +546,7 @@ void play_command(string letter)
     return;
 }
 
-/* Requests server to accept a word to be guessed and 
+/* Requests server to accept a word to be guessed and
    interprets its response
    - guess : word guessed by the player */
 void guess_command(string guess)
@@ -587,7 +579,7 @@ void guess_command(string guess)
     // Status switch case
     switch (status) {
     case STATUS_WIN: {
-        //End current game
+        // End current game
         cout << "WELL DONE! You guessed: " + guess + "\n";
         n_trials = -1;
         delete[] guessed;
@@ -690,7 +682,7 @@ void scoreboard_command()
     return;
 }
 
-/* Requests server for a hint image of the current game 
+/* Requests server for a hint image of the current game
    and interprets its response */
 void hint_command()
 {
@@ -751,7 +743,7 @@ void hint_command()
     return;
 }
 
-/* Requests server for the state of the current or last finished game 
+/* Requests server for the state of the current or last finished game
    and interprets its response */
 void state_command()
 {
@@ -881,8 +873,8 @@ int main(int argc, char* argv[])
             }
             scoreboard_command();
 
-        } 
-        
+        }
+
         else if (command == "hint" || command == "h") {
             if (PLID == "") {
                 cerr << "ERROR: PLID is currently NULL (no 'start' command has been used)\n";
@@ -894,8 +886,8 @@ int main(int argc, char* argv[])
             }
             hint_command();
 
-        } 
-        
+        }
+
         else if (command == "state" || command == "st") {
 
             if (PLID == "") {
@@ -908,8 +900,8 @@ int main(int argc, char* argv[])
             }
             state_command();
 
-        } 
-        
+        }
+
         else if (command == "quit") {
             if (fields[1] != "") {
                 cerr << "ERROR: Argument not required in this command\n";
@@ -917,8 +909,8 @@ int main(int argc, char* argv[])
             }
             disconnect();
 
-        } 
-        
+        }
+
         else if (command == "exit") {
             if (fields[1] != "") {
                 cerr << "ERROR: Argument not required in this command\n";
@@ -927,8 +919,8 @@ int main(int argc, char* argv[])
             disconnect();
             cout << "Exiting player application. Until next time!\n";
             exit(EXIT_SUCCESS);
-        } 
-        
+        }
+
         else {
             cerr << "ERROR: Command name not known\n";
         }
