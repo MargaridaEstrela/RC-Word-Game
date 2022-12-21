@@ -443,6 +443,7 @@ string get_active_state(char* PLID){
     for (int i = 0; i < size; i++){
         state += hidden[i];
     }
+    delete[] hidden;
     state += "\n";
     return state;
 }

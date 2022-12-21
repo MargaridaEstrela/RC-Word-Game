@@ -162,7 +162,7 @@ void process(void)
 
             switch (status) {
             case STATUS_OK: {
-                verb_response += "Success; \"" + (string)arg3 + "\" is part of the word; word not ed\n";
+                verb_response += "Success; \"" + (string)arg3 + "\" is part of the word; word not guessed\n";
                 char* trial_line = (char*)calloc(strlen(arg3) + 3, sizeof(char));
                 sprintf(trial_line, "T %s ", arg3);
                 add_trial(arg2, trial_line, "OK");
@@ -171,7 +171,7 @@ void process(void)
                 break;
             }
             case STATUS_WIN: {
-                verb_response += "Success; \"" + (string)arg3 + "\" is part of the word; word was ed (game ended)\n";
+                verb_response += "Success; \"" + (string)arg3 + "\" is part of the word; word was guessed (game ended)\n";
                 response = "RLG WIN " + (string)arg4 + "\n";
                 char* trial_line = (char*)calloc(strlen(arg3) + 3, sizeof(char));
                 sprintf(trial_line, "T %s ", arg3);
@@ -181,12 +181,12 @@ void process(void)
             }
             case STATUS_DUP: {
                 verb_response += "Fail; \"" + (string)arg3 + "\" has been played before; no play is registed\n";
-                response = "RLG DUP\n";
+                response = "RLG DUP " + std::to_string(trial) +"\n";
                 break;
             }
             case STATUS_NOK: {
                 verb_response += "Fail; \"" + (string)arg3 + "\" is not part of the word\n";
-                response = "RLG NOK\n";
+                response = "RLG NOK " + (string)arg4 + "\n";
                 char* trial_line = (char*)calloc(strlen(arg3) + 3, sizeof(char));
                 sprintf(trial_line, "T %s ", arg3);
                 add_trial(arg2, trial_line, "NOK");
@@ -194,7 +194,7 @@ void process(void)
             }
             case STATUS_OVR: {
                 verb_response += "Fail; \"" + (string)arg3 + "\" is not part of the word; max error limit reached (game ended)\n";
-                response = "RLG OVR\n";
+                response = "RLG OVR " + (string)arg4 + "\n";
                 char* trial_line = (char*)calloc(strlen(arg3) + 3, sizeof(char));
                 sprintf(trial_line, "T %s ", arg3);
                 add_trial(arg2, trial_line, "NOK");
@@ -207,7 +207,7 @@ void process(void)
                     verb_response += "Error; trial number doesn't match; \"" + (string)arg3 + "\" may not be the last played letter \n";
                     response = "RLG INV " + std::to_string(trial) + "\n";
                 } else if (last == STATUS_OK) {
-                    verb_response += "Success; lost message re-sent; \"" + (string)arg3 + "\" is part of the word; word not ed\n";
+                    verb_response += "Success; lost message re-sent; \"" + (string)arg3 + "\" is part of the word; word not guessed\n";
                     string pos = get_letter_positions(arg2, arg3);
                     response = "RLG OK " + string(arg4) + " " + pos + "\n";
                 } else if (last == STATUS_NOK) {
@@ -225,14 +225,14 @@ void process(void)
 
         } else if (!strcmp(arg1, "PWG")) {
 
-            verb_response += " word -> ";
+            verb_response += "Guess word -> ";
 
             status = check_guess_status(arg2, arg3, atoi(arg4));
             int trial = get_trials(arg2);
 
             switch (status) {
             case STATUS_WIN: {
-                verb_response += "Success; word \"" + (string)arg3 + "\" was the correct  (game ended)\n";
+                verb_response += "Success; word \"" + (string)arg3 + "\" was the correct guess (game ended)\n";
                 response = "RWG WIN " + (string)arg4 + "\n";
                 char* trial_line = (char*)calloc(strlen(arg3) + 3, sizeof(char));
                 sprintf(trial_line, "G %s ", arg3);
@@ -241,7 +241,7 @@ void process(void)
                 break;
             }
             case STATUS_NOK: {
-                verb_response += "Fail; word \"" + (string)arg3 + "\" was not the correct \n";
+                verb_response += "Fail; word \"" + (string)arg3 + "\" was not the correct guess\n";
                 response = "RWG NOK " + (string)arg4 + "\n";
                 char* trial_line = (char*)calloc(strlen(arg3) + 3, sizeof(char));
                 sprintf(trial_line, "G %s ", arg3);
@@ -249,7 +249,7 @@ void process(void)
                 break;
             }
             case STATUS_OVR: {
-                verb_response += "Fail; word \"" + (string)arg3 + "\" was not the correct ; max error limit reached (game ended)\n";
+                verb_response += "Fail; word \"" + (string)arg3 + "\" was not the correct guess; max error limit reached (game ended)\n";
                 response = "RWG OVR " + (string)arg4 + "\n";
                 char* trial_line = (char*)calloc(strlen(arg3) + 3, sizeof(char));
                 sprintf(trial_line, "G %s ", arg3);
@@ -260,7 +260,7 @@ void process(void)
             case STATUS_INV: {
                 int last = check_last_played(arg2, arg3, "G");
                 if (last == 0) {
-                    verb_response += "Error; trial number doesn't match; \"" + (string)arg3 + "\" may not be the last word ed\n";
+                    verb_response += "Error; trial number doesn't match; \"" + (string)arg3 + "\" may not be the last word played\n";
                     response = "RLG INV " + std::to_string(trial) + "\n";
                 } else if (last == 1) {
                     char* trial_line = (char*)calloc(strlen(arg3) + 3, sizeof(char));

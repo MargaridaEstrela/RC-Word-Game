@@ -8,18 +8,22 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+int test_word_counter = 1;
+
 void create_game_file(char* PLID)
 {
 
-    srand(time(0));
-    int index = rand() % WORD_COUNT;
+    if (test_word_counter > WORD_COUNT){
+        test_word_counter = 1;
+    }
     string line;
     char* game_user_dir = create_user_game_dir(PLID);
     std::ofstream new_game(game_user_dir);
     std::ifstream word_file(WORD_FILE);
-    for (int i = 0; i < index; i++) {
+    for (int i = 0; i < test_word_counter; i++) {
         std::getline(word_file, line);
     }
+    test_word_counter++;
     word_file.close();
     new_game << line;
     new_game << "\n";
@@ -340,6 +344,7 @@ string get_letter_positions(char* PLID, char* letter)
                 line += " ";
             }
         }
+        line.pop_back();
         game.close();
         return std::to_string(counter) + " " + line;
     }
