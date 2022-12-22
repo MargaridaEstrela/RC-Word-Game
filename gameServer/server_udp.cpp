@@ -293,15 +293,15 @@ void process(void)
                  * player is repeating the last PWG message received by the GS with a
                  * diferent word */
                 int last = check_last_played(arg2, arg3, "G");
-                if (last == 0) {
+                if (last == STATUS_INV) {
                     verb_response += "Error; trial number doesn't match; \"" + (string)arg3 + "\" may not be the last word played\n";
                     response = "RLG INV " + std::to_string(trial) + "\n";
-                } else if (last == 1) {
+                } else if (last == STATUS_OK) {
                     char* trial_line = (char*)calloc(strlen(arg3) + 3, sizeof(char));
                     sprintf(trial_line, "G %s ", arg3);
                     add_trial(arg2, trial_line, "OK");
                     end_current_game(arg2, "WIN");
-                } else if (last == 2) {
+                } else if (last == STATUS_NOK) {
                     verb_response += "Fail; lost message re-sent; \"" + (string)arg3 + "\" is not the hidden word\n";
                     response = "RWG NOK " + (string)arg4 + "\n";
                     char* trial_line = (char*)calloc(strlen(arg3) + 3, sizeof(char));
