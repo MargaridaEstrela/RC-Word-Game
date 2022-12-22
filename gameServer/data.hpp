@@ -65,9 +65,7 @@ string find_last_game(char* PLID);
 char* get_player_word(char *PLID);
 int get_word_size(char *PLID);
 
-// GUESS
-char* get_last_guess_letter(char *PLID);
-char* get_last_guess_word(char *PLID);
+// PLAY
 string get_letter_positions(char *PLID, char *letter);
 
 // TRIALS

@@ -9,13 +9,20 @@
 #include <sys/types.h>
 #include <vector>
 
+// Counter to determine what word will be
+// chosen in a new game start
 int test_word_counter = 1;
 
 
-
+/* Upon receiving a start command, registers user in the GAMES
+   directory by creating sub-directory GAMES/PLID and creates
+   a new game (file GAME_PLID.txt). If user already exists, then
+   simply create a new game.
+   Returns a status message, based on the current situation
+*/
 int register_user(char* PLID)
 {
-    if (!check_PLID(PLID)) {
+    if (!check_PLID(PLID)) { // If PLID isn't valid
         return STATUS_ERR;
     }
 
@@ -25,7 +32,7 @@ int register_user(char* PLID)
 
     user_dir = create_user_dir(PLID);
 
-    if (!user_exists(user_dir)) {
+    if (!user_exists(user_dir)) { // If user doesn't exist yet, create its game directory
         check = mkdir(user_dir, 0777);
 
         if (check == -1) {
@@ -39,7 +46,7 @@ int register_user(char* PLID)
 
     game_user_dir = create_user_game_dir(PLID);
 
-    if (check_ongoing_game(game_user_dir)) {
+    if (check_ongoing_game(game_user_dir)) {  // If there is a current ongoing game, cannot start new one (STATUS_NOK)
         free(game_user_dir);
         return STATUS_NOK;
     }
@@ -48,6 +55,10 @@ int register_user(char* PLID)
     return STATUS_OK;
 }
 
+/* Checks if a user is in the server database (has a GAMES/PLID directory)
+   - path : hypothetical directory path for GAMES/PLID ; 
+   Returns True if it is, False if it doesn't exist yet
+*/
 bool user_exists(char* path)
 {
     struct stat user_dir;
@@ -60,6 +71,10 @@ bool user_exists(char* path)
     return (user_dir.st_mode & S_IFDIR);
 }
 
+/* Checks if a user has an ongoing game (has a GAME_PLID.txt file)
+    - path : hypothetical file path for GAME_PLID.txt ;
+    Returns True if it exists, False if not
+*/
 bool check_ongoing_game(char* path)
 {
     FILE* game;
@@ -72,6 +87,9 @@ bool check_ongoing_game(char* path)
     }
 }
 
+/* Creates a formated path for an hypothetical user directory (GAMES/PLID)
+   Returns the computed path user_dir
+*/
 char* create_user_dir(char* PLID)
 {
     char* user_dir = (char*)calloc(strlen(USER_DIR), sizeof(char));
@@ -83,6 +101,9 @@ char* create_user_dir(char* PLID)
     return user_dir;
 }
 
+/* Creates a formated path for an hypothetical game file (GAME_PLID.txt)
+   Returns the computed path user_game_dir
+*/
 char* create_user_game_dir(char* PLID)
 {
     char* user_game_dir = (char*)calloc(/*strlen(USER_OG_GAME_DIR)+*/ 30, sizeof(char));
@@ -92,31 +113,36 @@ char* create_user_game_dir(char* PLID)
     return user_game_dir;
 }
 
+/* Creates and initializes a new game file for a specific player*/
 void create_game_file(char* PLID)
 {
 
-    if (test_word_counter > WORD_COUNT){
+    if (test_word_counter > WORD_COUNT){ // Reseting the counter for word choosing
         test_word_counter = 1;
     }
     string line;
     char* game_user_dir = create_user_game_dir(PLID);
-    std::ofstream new_game(game_user_dir);
+    std::ofstream new_game(game_user_dir); // Creating the game file
     std::ifstream word_file(WORD_FILE);
-    for (int i = 0; i < test_word_counter; i++) {
+    for (int i = 0; i < test_word_counter; i++) { // Picking the line from the word file
         std::getline(word_file, line);
     }
     test_word_counter++;
     word_file.close();
-    new_game << line;
+    new_game << line;   // Filling the file with the line from the word file
     new_game << "\n";
     new_game.close();
 }
 
+
+/* Creates and elaborates a score file, and stores it in directory 
+   SCORES. Called when a game is finished with a win
+*/
 int create_score_file(char* PLID)
 {
     char* game_user_dir = create_user_game_dir(PLID);
     std::ifstream game;
-    game.open(game_user_dir);
+    game.open(game_user_dir);   // Opening the just finished game
     if (game.is_open()) {
         char* filename;
         char* word;
@@ -125,7 +151,7 @@ int create_score_file(char* PLID)
         int total = 0;
         float score;
 
-        while (std::getline(game, line)) {
+        while (std::getline(game, line)) {       // Analysing the game for score metrics
             std::stringstream stream_line(line);
             stream_line >> code;
             if (code == "T" || code == "G") {
@@ -139,7 +165,7 @@ int create_score_file(char* PLID)
         }
 
         game.close();
-        score = (hits * 100 / total);
+        score = (hits * 100 / total);                       // Creating the score file
         filename = get_score_filename(PLID, (int)score);
         word = get_player_word(PLID);
         std::ofstream score_file(filename);
@@ -159,6 +185,10 @@ int create_score_file(char* PLID)
     return -1;
 }
 
+/* Auxiliary function to create_score_file. Creates the
+   proper name for the new score file, according to certain
+   defined rules. Returns the filename
+*/
 char* get_score_filename(char* PLID, int score)
 {
     time_t rawtime;
@@ -170,14 +200,14 @@ char* get_score_filename(char* PLID, int score)
     timeinfo = localtime(&rawtime);
 
     string check = std::to_string(score);
-    char* pad = "";
+    char* pad = "";                       // The score must always have 3 digits, for sorting purposes
     if (check.length() == 2) {
         pad = "0";
     }
     if (check.length() == 1) {
         pad = "00";
     }
-    strftime(buffer, 80, "%d%m%Y_%H%M%S", timeinfo);
+    strftime(buffer, 80, "%d%m%Y_%H%M%S", timeinfo);       // Creation of formated file name, based on current time
     sprintf(filename, "SCORES/%s%d_%s_", pad, score, PLID);
     strcat(filename, buffer);
     strcat(filename, ".txt");
@@ -185,6 +215,11 @@ char* get_score_filename(char* PLID, int score)
     return filename;
 }
 
+
+/* Function used while processing the scoreboard command.
+   Checks if directory SCORES is currently empty and returns
+   the appropriate status message
+*/
 int check_score_file()
 {
     DIR* dp;
@@ -208,6 +243,9 @@ int check_score_file()
     return -1;
 }
 
+/* Reads the contents of a score file of name filename.
+   Returns a string, composed of the only line of the file
+*/
 string read_score_file(string filename)
 {
     std::ifstream file(filename);
@@ -216,6 +254,10 @@ string read_score_file(string filename)
     return score;
 }
 
+/* Auxiliary function of create_scoreboard. Sorts the SCORES 
+   directory based on file name, prioritizing the highest scores. 
+   Then, composes the top ten scores in a string and returns it
+*/
 string get_scores()
 {
     std::vector<string> result;
@@ -223,7 +265,7 @@ string get_scores()
     struct dirent** filelist;
     int n_entries, i_file;
     char f_name[50];
-    n_entries = scandir("SCORES/", &filelist, 0, alphasort);
+    n_entries = scandir("SCORES/", &filelist, 0, alphasort);  // Sorting the directory
     int counter = 1;
 
     while (n_entries--) {
@@ -232,8 +274,8 @@ string get_scores()
                 break;
             }
 
-            sprintf(f_name, "SCORES/%s", filelist[n_entries]->d_name);
-            string score_file = read_score_file((string)f_name);
+            sprintf(f_name, "SCORES/%s", filelist[n_entries]->d_name);   // For each of the top ten scores, analyze its score
+            string score_file = read_score_file((string)f_name);         // file and compose the scoreboard string
             std::stringstream ss(score_file);
             string word;
             int size;
@@ -275,6 +317,9 @@ string get_scores()
     return scoreboard;
 }
 
+/* Creates the new name for a current game file (GAME_PLID.txt) 
+   that has been finished, and returns it
+*/
 char* get_new_name(char* code)
 {
     time_t rawtime;
@@ -292,11 +337,14 @@ char* get_new_name(char* code)
     return buffer;
 }
 
+/* Ends the current game for a specific player (PLID),
+   under a specific code (WIN, FAIL or QUIT).
+*/
 void end_current_game(char* PLID, char* code)
 {
 
     if (!strcmp(code, "WIN")) {
-        int i = create_score_file(PLID);
+        int i = create_score_file(PLID);   // If it's a win, create the respective score file
     }
 
     char* game_user_dir = create_user_game_dir(PLID);
@@ -308,8 +356,8 @@ void end_current_game(char* PLID, char* code)
     game << "\n";
     game.close();
 
-    strcpy(command, "mv ");
-    strcat(command, game_user_dir);
+    strcpy(command, "mv ");           // Rename and move the current game file to the GAMES/PLID directory
+    strcat(command, game_user_dir);   // of its player
     strcat(command, " ");
     strcat(command, user_dir);
 
@@ -320,6 +368,10 @@ void end_current_game(char* PLID, char* code)
     return;
 }
 
+
+/* Sorts a GAMES/PLID directory, prioritizing the most recent game.
+   Returns its respective path.
+*/
 string find_last_game(char* PLID){
     struct dirent **filelist;
     int n_entries,found;
@@ -345,6 +397,9 @@ string find_last_game(char* PLID){
 
 }
 
+/* Opens the current game file for player PLID and
+   returns the game word.
+*/
 char* get_player_word(char* PLID)
 {
     string line;
@@ -357,9 +412,11 @@ char* get_player_word(char* PLID)
     return word;
 }
 
+/* Reads the current game file for player PLID and returns
+   the size of the game word.
+*/
 int get_word_size(char* PLID)
 {
-
     char* game_user_dir = create_user_game_dir(PLID);
     std::ifstream game;
     string line;
@@ -375,71 +432,12 @@ int get_word_size(char* PLID)
     return -1;
 }
 
-char* get_last_guess_letter(char* PLID)
-{
-    std::ifstream game;
-    char *user_dir, *game_user_dir;
-    user_dir = create_user_dir(PLID);
-    game_user_dir = create_user_game_dir(PLID);
-    char* code = nullptr;
-    char* letter = nullptr;
 
-    game.open(game_user_dir);
-
-    if (game.is_open()) {
-        string line;
-        int count = 0;
-
-        while (std::getline(game, line)) {
-
-            if (count == 0) {
-                continue;
-            }
-
-            std::stringstream stream_line(line);
-            stream_line >> code;
-            if (!strcmp(code, "T")) {
-                stream_line >> letter;
-            }
-        }
-    }
-
-    return letter;
-}
-
-char* get_last_guess_word(char* PLID)
-{
-    std::ifstream game;
-    char *user_dir, *game_user_dir;
-    user_dir = create_user_dir(PLID);
-    game_user_dir = create_user_game_dir(PLID);
-    char* code = nullptr;
-    char* word = nullptr;
-
-    game.open(game_user_dir);
-
-    if (game.is_open()) {
-        string line;
-        int count = 0;
-
-        while (game) {
-            std::getline(game, line);
-
-            if (count == 0) {
-                continue;
-            }
-
-            std::stringstream stream_line(line);
-            stream_line >> code;
-
-            if (!strcmp(code, "G")) {
-                stream_line >> word;
-            }
-        }
-    }
-    return word;
-}
-
+/* Checks what and how many positions a specific letter
+   reveals in the word of a game file GAME_PLID.txt.
+   Returns formated string "n pos*", in which n is
+   the number of positions and pos the index(s)
+*/
 string get_letter_positions(char* PLID, char* letter)
 {
     char* game_user_dir = create_user_game_dir(PLID);
@@ -470,6 +468,9 @@ string get_letter_positions(char* PLID, char* letter)
     return "ERR";
 }
 
+/* Reads the current game file GAME_PLID.txt to determine
+   the number of trials in a game, and returns it
+*/
 int get_trials(char* PLID)
 {
     std::ifstream game;
@@ -490,11 +491,13 @@ int get_trials(char* PLID)
     return count - 1;
 }
 
+/* Adds a trial to a current game file, according
+   to a code (OK for right guesses; NOK for wrong guesses)
+*/
 void add_trial(char* PLID, char* trial, char* code)
 {
     std::ofstream game;
-    char *user_dir, *game_user_dir;
-    user_dir = create_user_dir(PLID);
+    char *game_user_dir;
     game_user_dir = create_user_game_dir(PLID);
 
     game.open(game_user_dir, std::ios::app);
@@ -508,10 +511,10 @@ void add_trial(char* PLID, char* trial, char* code)
 }
 
 
-
-
-
-
+/* Checks if a specific letter (play) completes a
+   game word for a current game.
+   Returns 1 if yes, 0 if not.
+*/
 int check_completion(char* PLID, char* play)
 {
     string code, state;
@@ -558,6 +561,10 @@ int check_completion(char* PLID, char* play)
     }
 }
 
+/* Checks if in a current game there has been
+   no plays (letter or guesses) made.
+   Return 1 with no plays, 0 with more.
+*/
 int check_no_moves(char* PLID)
 {
     int n = get_trials(PLID);
@@ -568,6 +575,10 @@ int check_no_moves(char* PLID)
     }
 }
 
+/* Checks if, in a current game, the letter 'play'
+   has already been played before.
+   Returns 1 when duplicate, 0 when it's a new letter.
+*/
 int check_dup(char* PLID, char* play)
 {
     char* game_user_dir = create_user_game_dir(PLID);
@@ -595,6 +606,10 @@ int check_dup(char* PLID, char* play)
     return -1;
 }
 
+/* Checks if, in a current game, the word 'guess'
+   has already been played before.
+   Returns 1 when duplicate, 0 when it's a new word.
+*/
 int check_word_dup(char* PLID,char* guess){
     char* game_user_dir = create_user_game_dir(PLID);
     string code, word;
@@ -621,6 +636,10 @@ int check_word_dup(char* PLID,char* guess){
     return -1;
 }
 
+/* Checks what the updated game state shall be, based
+   on the guessed letter 'letter', and returns the
+   correspondent status message.
+*/
 int check_letter(char* PLID, char* letter)
 {
     int n = 0;
@@ -647,6 +666,11 @@ int check_letter(char* PLID, char* letter)
     }
 }
 
+
+/* Checks what the updated game state shall be, based
+   on the guessed word 'guess', and returns the
+   correspondent status message.
+*/
 int check_word(char* PLID, char* guess)
 {
     int n;
@@ -669,6 +693,11 @@ int check_word(char* PLID, char* guess)
     }
 }
 
+
+/* When the trial number is incoherent between server and player,
+   this function checks if new message is a repeat of the last one
+   sent before message loss, or if message is truly invalid
+*/
 int check_last_played(char* PLID, char* guess, char* code)
 {
     char* game_user_dir = create_user_game_dir(PLID);
@@ -715,6 +744,10 @@ int check_last_played(char* PLID, char* guess, char* code)
     return -1;
 }
 
+/* Checks the updated game status for the current game of 
+   player PLID, based on the guessed letter and given number of
+   trials. Returns the respective status message.
+*/
 int check_play_status(char* PLID, char* letter, int trials)
 {
     char* game_user_dir = create_user_game_dir(PLID);
@@ -743,6 +776,10 @@ int check_play_status(char* PLID, char* letter, int trials)
     }
 }
 
+/* Checks the updated game status for the current game of 
+   player PLID, based on the guessed word and given number of
+   trials. Returns the respective status message.
+*/
 int check_guess_status(char* PLID, char* guess, int trials)
 {
     char* user_game_dir = create_user_game_dir(PLID);
@@ -771,6 +808,10 @@ int check_guess_status(char* PLID, char* guess, int trials)
     }
 }
 
+/* Checks the current state regarding the potential transmission
+   of a hint file for a current game. Returns the appropriate 
+   status message.
+*/
 int check_image(char* PLID)
 {
     char* game_user_dir = create_user_game_dir(PLID);
@@ -791,15 +832,18 @@ int check_image(char* PLID)
     std::ifstream file;
     file.open(path);
 
-    if (file.is_open()) {
+    if (file.is_open()) {  // Checking if hint file exists or not
         file.close();
         return STATUS_OK;
     } else {
         return STATUS_NOK;
     }
-    return 1;
 }
 
+/* Reads the current game file for player PLID and computes
+   the current number of errors that he has already commited.
+   Returns the number of errors.
+*/
 int get_errors(char* PLID)
 {
     string code, state;
@@ -826,6 +870,10 @@ int get_errors(char* PLID)
     return -1;
 }
 
+/* Checks the current state regarding the potential transmission
+   of a state file for a current or last finished game. Returns 
+   the appropriate status message.
+*/
 int check_current_state(char* PLID){
     char* user_dir = create_user_dir(PLID);
     if (!check_PLID(PLID) || !user_exists(user_dir)) {
@@ -844,6 +892,9 @@ int check_current_state(char* PLID){
 
 }
 
+/* Compute and return the complete state file for the last
+   finished game of player PLID.
+*/
 string get_last_state(char* PLID){
     string state,line,word;
     string aux = "";
@@ -904,6 +955,10 @@ string get_last_state(char* PLID){
 
 }
 
+
+/* Compute and return the complete state file for the current
+   ongoing game of player PLID.
+*/
 string get_active_state(char* PLID){
     string state,line,word,positions;
     string aux = "";

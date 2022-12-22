@@ -57,7 +57,7 @@ void sig_handler(int sig);
 
 
 /*
- * Function responsible for form a TCP connection with client. 
+ * Function responsible for setting up the TCP "master" socket 
  */
 void setup_tcp(void)
 {
@@ -104,7 +104,7 @@ void setup_tcp(void)
 
 
 /*
- * Function responsible for create the scoreboard
+ * Function responsible for creating the scoreboard
  */
 string create_scoreboard()
 {
@@ -134,7 +134,8 @@ string create_scoreboard()
 
 
 /*
- * Function responsible for get the hint filename associated with the player
+ * Function responsible for getting the hint filename associated with the
+ * current game. 
  */
 string get_hint_filename(char* PLID)
 {
@@ -151,7 +152,7 @@ string get_hint_filename(char* PLID)
 
 
 /*
- * Function responsible for eads current game file 
+ * Function responsible for reading the current game file 
  * to discover hint file name. Reads it and sends 
  * its contents through TCP to the user 
  */
@@ -198,7 +199,7 @@ int get_hint_file(char* PLID)
 
 
 /*
- * Function responsible for receive the client request and process it
+ * Function responsible for receiving the client request and processing it
  */
 void process(void)
 {
@@ -215,7 +216,7 @@ void process(void)
             exit(1);
         }
 
-        pid_t tcp_pid = fork();
+        pid_t tcp_pid = fork();  // Creation of client process
         if (tcp_pid == 0){
             n = recv(new_fd, request, MAX_TCP_READ,0);
             if (n == -1) {
@@ -232,7 +233,7 @@ void process(void)
 
 
             if (!strcmp(arg1, "GSB")) {
-                // Th Player asks to receive the top-10 scoreboard.
+                // The Player asks to receive the top-10 scoreboard
                 verb_response = "PLID not given: ";
                 verb_response += "Get scoreboard -> ";
                 int status = check_score_file();
@@ -257,7 +258,7 @@ void process(void)
                 }
 
             } else if (!strcmp(arg1,"GHL")) {
-                // The Player asks to receive an image illustrating the class to which the word belongs.
+                // The Player asks to receive an image illustrating the class to which the word belongs to
                 verb_response = "PLID = ";
                 verb_response += (string)arg2 + ": ";
                 verb_response += "Get hint file -> ";
@@ -265,7 +266,7 @@ void process(void)
                 int status = check_image(arg2);
                 switch (status) {
                     case STATUS_OK: {
-                        // Sends a file containing the image illustrative of the word class.
+                        // Sends a file containing the image illustrative of the word class
                         int size = get_hint_file(arg2);
                         string filename = get_hint_filename(arg2);
                         verb_response += "Success; hint file will be sent under filename " + filename;
@@ -273,7 +274,7 @@ void process(void)
                         break;
                     }
                     case STATUS_NOK:
-                        // There is no file to be sent, or some other problem,
+                        // There is no file to be sent, or some other problems
                         response = "RHL NOK\n";
                         verb_response += "Error; PLID may be invalid or no game must be currently ongoing\n";
                         break;
@@ -281,7 +282,7 @@ void process(void)
                 }
 
             } else if (!strcmp(arg1, "STA")) {
-                // The Player asks about the state of the ongoing game at the Player.
+                // The Player asks about the state of the ongoing game of the Player
                 verb_response = "PLID = ";
                 verb_response += (string)arg2 + ": ";
                 verb_response += "Get game state file -> ";
@@ -306,7 +307,7 @@ void process(void)
                         break;
                     }
                     case STATUS_FIN: {
-                        // There is no ongoing game
+                        // There is no ongoing game, but at least a finished one
                         string last_game = get_last_state(arg2);
                         string fname = "STATE_" + (string)arg2;
                         string f_size = std::to_string(last_game.length());
@@ -353,15 +354,15 @@ void process(void)
             exit(EXIT_SUCCESS);
         }
         else {
-            close(new_fd);
-            continue;
+            close(new_fd);  // Main process, simply continue to the next iteration of the loop, in order
+            continue;       // to receive new client requests
         }
     }
 }
 
 
 /* 
- * Function responsible for end the UDP session
+ * Function responsible for ending the TCP session
  */
 void end_TCP_session(void)
 {
@@ -389,7 +390,7 @@ void sig_handler(int sig)
 
 
 /*
- * Function responsible for decode the input and call functions to handle with it.
+ * Function responsible for decoding the input and calling main functions
  */
 int main(int argc, char* argv[])
 {

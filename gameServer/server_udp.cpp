@@ -52,7 +52,7 @@ void sig_handler(int sig);
 
 
 /*
- * Function responsible for form a UDP connection with client. 
+ * Function responsible for setting up a UDP socket 
  */
 void setup_udp(void)
 {
@@ -96,7 +96,7 @@ void setup_udp(void)
 
 
 /*
- * Function responsible for receive the client request and process it
+ * Function responsible for receiving the client request and processing it
  */
 void process(void)
 {
@@ -200,7 +200,7 @@ void process(void)
                 break;
             }
             case STATUS_DUP: {
-                // The letter guess completes the word;
+                // The letter has already been played;
                 verb_response += "Fail; \"" + (string)arg3 + "\" has been played before; no play is registed\n";
                 response = "RLG DUP " + std::to_string(trial) +"\n";
                 break;
@@ -217,7 +217,7 @@ void process(void)
             }
             case STATUS_OVR: {
                 /* The letter is not part of the word to be guessed and there are
-                 * more attempts available and there are no more attempts available */
+                 * no more attempts available */
                 verb_response += "Fail; \"" + (string)arg3 + "\" is not part of the word; max error limit reached (game ended)\n";
                 response = "RLG OVR " + (string)arg4 + "\n";
                 char* trial_line = (char*)calloc(strlen(arg3) + 3, sizeof(char));
@@ -252,7 +252,7 @@ void process(void)
 
         } else if (!strcmp(arg1, "PWG")) {
             /* Following the guess command, the Player sends the GS a request to 
-             * check if the word to guess is word, as well as the number of trials */
+             * check if the word to guess is correct, as well as the number of trials */
             verb_response += "Guess word -> ";
 
             status = check_guess_status(arg2, arg3, atoi(arg4));
@@ -289,7 +289,7 @@ void process(void)
                 break;
             }
             case STATUS_INV: {
-                /* The trial number is not the one expected by the GS, or if the
+                /* The trial number is not the one expected by the GS, or the
                  * player is repeating the last PWG message received by the GS with a
                  * diferent word */
                 int last = check_last_played(arg2, arg3, "G");
@@ -372,7 +372,7 @@ void process(void)
 }
 
 /* 
- * Function responsible for end the UDP session
+ * Function responsible for ending the UDP session
  */
 void end_UDP_session(void)
 {
@@ -400,7 +400,7 @@ void sig_handler(int sig)
 }
 
 /*
- * Function responsible for decode the input and call functions to handle with it.
+ * Function responsible for decoding the input and setting up main functions.
  */
 int main(int argc, char* argv[])
 {

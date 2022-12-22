@@ -3,7 +3,7 @@
 
 
 /* 
- * Function responsible for check if the given PLID is valid.
+ * Function responsible for checking if the given PLID is valid.
 */
 bool check_PLID(char* PLID)
 {
@@ -23,7 +23,7 @@ bool check_PLID(char* PLID)
 
 
 /* 
- * Function responsible for gets the maximum number of errors 
+ * Function responsible for getting the maximum number of errors 
  * that can be committed before losing the game. 
  */
 int max_errors(int word_size)
@@ -39,7 +39,7 @@ int max_errors(int word_size)
 
 
 /* 
- * Function responsible for return the respective game status
+ * Function responsible for translating game status messages to integers
 */
 int translate_status(std::string state)
 {
