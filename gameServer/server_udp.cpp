@@ -26,6 +26,10 @@
 using string = std::string;
 
 // GLOBAL VARIABLES
+char* GSPORT = "58034";
+
+
+// SESSION AND GAME STATE VARIABLES
 int fd;
 ssize_t n;
 
@@ -35,7 +39,6 @@ socklen_t addrlen;
 
 struct sigaction oldact;
 
-char* GSPORT = "58034";
 char* word;
 bool verbose;
 int status;
@@ -48,13 +51,15 @@ void end_UDP_session();
 void sig_handler(int sig);
 
 
-
+/*
+ * Function responsible for form a UDP connection with client. 
+ */
 void setup_udp(void)
 {
     int errcode;
     struct sigaction sig_action;
 
-    fd = socket(AF_INET, SOCK_DGRAM, 0);
+    fd = socket(AF_INET, SOCK_DGRAM, 0); // Create UDP socket
 
     if (fd < 0) {
         perror("socket failed");
@@ -71,6 +76,7 @@ void setup_udp(void)
     if (errcode != 0)
         exit(1);
 
+    // Bind the socket to the server address
     n = bind(fd, (const struct sockaddr*)res->ai_addr, res->ai_addrlen);
     if (n < 0) {
         perror("bind failed");
@@ -88,6 +94,10 @@ void setup_udp(void)
     return;
 }
 
+
+/*
+ * Function responsible for receive the client request and process it
+ */
 void process(void)
 {
     std::cout << "Start UDP Process" << std::endl;
@@ -119,6 +129,7 @@ void process(void)
         verb_response = "PLID = ";
         verb_response += (string)arg2 + ": ";
 
+        // Following the start command, the Player requests to start a new game
         if (!strcmp(arg1, "SNG")) {
 
             verb_response += "Start new game -> ";
@@ -127,6 +138,7 @@ void process(void)
 
             switch (status) {
             case STATUS_OK: {
+                // The game can be started (or no play was yet received)
                 char* game_word = get_player_word(arg2);
                 int word_size = strlen(game_word);
                 int errors = max_errors(word_size);
@@ -136,9 +148,10 @@ void process(void)
                 break;
             }
             case STATUS_NOK: {
+                // The player has any ongoing game (with play moves)
                 int word_size = get_word_size(arg2);
                 int errors = max_errors(word_size);
-                if (check_no_moves(arg2)) {
+                if (check_no_moves(arg2)) { // verify play moves
                     response = "RSG OK " + std::to_string(word_size) + " " + std::to_string(errors) + "\n";
                     verb_response += "No plays have yet occured in current game; re-sending previous response\n";
                 }
@@ -150,13 +163,16 @@ void process(void)
                 break;
             }
             case STATUS_ERR:
+                // The syntax of the SNG was incorrect or the PLID is invalid.
                 verb_response += "Error; PLID sent may be invalid\n";
                 response = "RSG ERR\n";
                 break;
             }
 
         } else if (!strcmp(arg1, "PLG")) {
-
+            /* Following the play command, the Player sends the GS a request 
+             * to check if letter is part of the word to be guessed and the
+             * number of trials */
             verb_response += "Play letter -> ";
 
             status = check_play_status(arg2, arg3, atoi(arg4));
@@ -164,6 +180,7 @@ void process(void)
 
             switch (status) {
             case STATUS_OK: {
+                // The letter guess was successful and the number of trials is correct
                 verb_response += "Success; \"" + (string)arg3 + "\" is part of the word; word not guessed\n";
                 char* trial_line = (char*)calloc(strlen(arg3) + 3, sizeof(char));
                 sprintf(trial_line, "T %s ", arg3);
@@ -173,6 +190,7 @@ void process(void)
                 break;
             }
             case STATUS_WIN: {
+                // The letter guess completes the word;
                 verb_response += "Success; \"" + (string)arg3 + "\" is part of the word; word was guessed (game ended)\n";
                 response = "RLG WIN " + (string)arg4 + "\n";
                 char* trial_line = (char*)calloc(strlen(arg3) + 3, sizeof(char));
@@ -182,11 +200,14 @@ void process(void)
                 break;
             }
             case STATUS_DUP: {
+                // The letter guess completes the word;
                 verb_response += "Fail; \"" + (string)arg3 + "\" has been played before; no play is registed\n";
                 response = "RLG DUP " + std::to_string(trial) +"\n";
                 break;
             }
             case STATUS_NOK: {
+                /* The letter is not part of the word to be guessed and the number of 
+                 * attempts left is not zero */
                 verb_response += "Fail; \"" + (string)arg3 + "\" is not part of the word\n";
                 response = "RLG NOK " + (string)arg4 + "\n";
                 char* trial_line = (char*)calloc(strlen(arg3) + 3, sizeof(char));
@@ -195,6 +216,8 @@ void process(void)
                 break;
             }
             case STATUS_OVR: {
+                /* The letter is not part of the word to be guessed and there are
+                 * more attempts available and there are no more attempts available */
                 verb_response += "Fail; \"" + (string)arg3 + "\" is not part of the word; max error limit reached (game ended)\n";
                 response = "RLG OVR " + (string)arg4 + "\n";
                 char* trial_line = (char*)calloc(strlen(arg3) + 3, sizeof(char));
@@ -204,6 +227,7 @@ void process(void)
                 break;
             }
             case STATUS_INV: {
+                // The trial number is not valid
                 int last = check_last_played(arg2, arg3, "T");
                 if (last == STATUS_INV) {
                     verb_response += "Error; trial number doesn't match; \"" + (string)arg3 + "\" may not be the last played letter \n";
@@ -219,6 +243,7 @@ void process(void)
                 break;
             }
             case STATUS_ERR: {
+                // The syntax of the PLG was incorrect
                 verb_response += "Error; PLID or letter \"" + (string)arg3 + "\" may be invalid or no game is currently active\n";
                 response = "RLG ERR\n";
                 break;
@@ -226,7 +251,8 @@ void process(void)
             }
 
         } else if (!strcmp(arg1, "PWG")) {
-
+            /* Following the guess command, the Player sends the GS a request to 
+             * check if the word to guess is word, as well as the number of trials */
             verb_response += "Guess word -> ";
 
             status = check_guess_status(arg2, arg3, atoi(arg4));
@@ -234,6 +260,7 @@ void process(void)
 
             switch (status) {
             case STATUS_WIN: {
+                // The word guess was successful;
                 verb_response += "Success; word \"" + (string)arg3 + "\" was the correct guess (game ended)\n";
                 response = "RWG WIN " + (string)arg4 + "\n";
                 char* trial_line = (char*)calloc(strlen(arg3) + 3, sizeof(char));
@@ -243,6 +270,7 @@ void process(void)
                 break;
             }
             case STATUS_NOK: {
+                // The word guess is not correct and the number of attempts left is not zero
                 verb_response += "Fail; word \"" + (string)arg3 + "\" was not the correct guess\n";
                 response = "RWG NOK " + (string)arg4 + "\n";
                 char* trial_line = (char*)calloc(strlen(arg3) + 3, sizeof(char));
@@ -251,6 +279,7 @@ void process(void)
                 break;
             }
             case STATUS_OVR: {
+                // The word guess is not correct and there are no more attempts available
                 verb_response += "Fail; word \"" + (string)arg3 + "\" was not the correct guess; max error limit reached (game ended)\n";
                 response = "RWG OVR " + (string)arg4 + "\n";
                 char* trial_line = (char*)calloc(strlen(arg3) + 3, sizeof(char));
@@ -260,6 +289,9 @@ void process(void)
                 break;
             }
             case STATUS_INV: {
+                /* The trial number is not the one expected by the GS, or if the
+                 * player is repeating the last PWG message received by the GS with a
+                 * diferent word */
                 int last = check_last_played(arg2, arg3, "G");
                 if (last == 0) {
                     verb_response += "Error; trial number doesn't match; \"" + (string)arg3 + "\" may not be the last word played\n";
@@ -279,17 +311,22 @@ void process(void)
                 break;
             }
             case STATUS_DUP: {
+                // The word was sent in a previous trial
                 verb_response += "Fail; word \"" + (string)arg3 +"\" has already been sent before; no play is registed\n";
                 response = "RWG DUP " + std::to_string(trial) + "\n";
                 break;
             }
             case STATUS_ERR:
+                // The syntax of the PWG was incorrect
                 verb_response += "Error; PLID or word \"" + (string)arg3 + "\" may be invalid or no game is currently active\n";
                 response = "RWG ERR\n";
                 break;
             }
 
         } else if (!strcmp(arg1, "QUT")) {
+            /* Following the quit or exit commands, and if there is an ongoing game, 
+             * the Player application sends the GS a message with the player PLID requesting 
+             * to terminate the game. */
 
             verb_response += "Quit current game -> ";
 
@@ -301,7 +338,8 @@ void process(void)
             }
 
             char* user_game_dir = create_user_game_dir(arg2);
-
+            
+            // Check if there is an ongoing game
             if (check_ongoing_game(user_game_dir)) {
                 verb_response += "Success; current game has been closed\n";
                 end_current_game(arg2, "QUIT");
@@ -314,6 +352,7 @@ void process(void)
             verb_response += "Error -> Protocol message \"" + (string)arg1 + "\" is not recognized by the server\n";
             response = "ERR\n";
         }
+        
         // SEND RESPONSE
         if (verbose) {
             printf("Message received: ");
@@ -332,6 +371,9 @@ void process(void)
     }
 }
 
+/* 
+ * Function responsible for end the UDP session
+ */
 void end_UDP_session(void)
 {
     std::cout << "Closing UDP session..." << std::endl;
@@ -342,6 +384,10 @@ void end_UDP_session(void)
     return;
 }
 
+/*
+ * Function responsible for the handling of the interruption signal (ctrl + C).
+ * Terminates all the process.
+ */
 void sig_handler(int sig)
 {
     std::cout << "Caught Ctrl-C..." << std::endl;
@@ -353,6 +399,9 @@ void sig_handler(int sig)
     return;
 }
 
+/*
+ * Function responsible for decode the input and call functions to handle with it.
+ */
 int main(int argc, char* argv[])
 {
     word = new char[sizeof(argv[1])];

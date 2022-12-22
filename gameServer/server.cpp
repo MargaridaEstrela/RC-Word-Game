@@ -37,17 +37,20 @@ socklen_t addrlen;
 struct sigaction oldact;
 
 pid_t udp_pid;
-pid_t tcp_pid;
 
 
 // FUNCTIONS
-void decoder(int argc, char* argv[]);
+void decoder();
 void sig_handler(int sig);
 
 
-
+/* 
+ * Function responsible for the decoding of the server application execution command
+ * (./GS word_file [-p GSport] [-v])
+ */
 void decoder(int argc, char* argv[])
 {
+    // No flags used
     if (argc == 2) {
         word = new char[sizeof(argv[1])];
         word = argv[1];
@@ -62,6 +65,7 @@ void decoder(int argc, char* argv[])
     word = new char[sizeof(argv[1])];
     word = argv[1];
 
+    // Flag handling
     if (argc >= 3 && argc <= 5) {
         for (int i = 2; i < argc; i += 2) {
             if (string(argv[i]) == "-p") {
@@ -77,17 +81,23 @@ void decoder(int argc, char* argv[])
     return;
 }
 
+/*
+ * Function responsible for the handling of the interruption signal (ctrl + C).
+ * Terminates all the process.
+ */
 void sig_handler(int sig)
 {
     std::cout << "Caught Ctrl-C..." << std::endl;
 
     kill(udp_pid, SIGINT);
-    kill(tcp_pid, SIGINT);
 
     sigaction(SIGINT, &oldact, NULL);
     kill(0, SIGINT);
 }
 
+/*
+ * Infinite loop that reads the start command and redirects to the UDP and TCP server connections
+ */
 int main(int argc, char* argv[])
 {
     struct sigaction sig_action;
@@ -98,7 +108,6 @@ int main(int argc, char* argv[])
     mkdir(SCORES_DIR, 0777);
 
     udp_pid = fork();
-    //tcp_pid = fork();
 
     if (udp_pid == 0) {
         execl("./server_udp", "server_udp", word, GSPORT.c_str(), verbose.c_str(), NULL);

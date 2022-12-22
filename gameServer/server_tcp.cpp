@@ -29,6 +29,9 @@ using string = std::string;
 
 // GLOBAL VARIABLES
 char* GSPORT = "58034";
+
+
+// SESSION AND GAME STATE VARIABLES
 bool verbose;
 int status;
 
@@ -53,12 +56,14 @@ void sig_handler(int sig);
 
 
 
-
+/*
+ * Function responsible for form a TCP connection with client. 
+ */
 void setup_tcp(void)
 {
     int errcode;
     struct sigaction sig_action;
-    fd = socket(AF_INET, SOCK_STREAM, 0);
+    fd = socket(AF_INET, SOCK_STREAM, 0); // Create socket
 
     if (fd < 0) {
         perror("socket failed");
@@ -75,12 +80,14 @@ void setup_tcp(void)
     if (errcode != 0)
         exit(1);
 
+    // Bind the socket to the server address
     n = bind(fd, res->ai_addr, res->ai_addrlen);
     if (n < 0) {
         perror("bind failed");
         exit(1);
     }
 
+    // Put the server socket in a passive mode
     if (listen(fd, 5) < 0) {
         perror("listen failed");
         exit(1);
@@ -95,6 +102,10 @@ void setup_tcp(void)
     sigaction(SIGINT, &sig_action, &oldact);
 }
 
+
+/*
+ * Function responsible for create the scoreboard
+ */
 string create_scoreboard()
 {
     string scoreboard = "";
@@ -121,6 +132,10 @@ string create_scoreboard()
     return scoreboard;
 }
 
+
+/*
+ * Function responsible for get the hint filename associated with the player
+ */
 string get_hint_filename(char* PLID)
 {
 
@@ -135,6 +150,11 @@ string get_hint_filename(char* PLID)
 }
 
 
+/*
+ * Function responsible for eads current game file 
+ * to discover hint file name. Reads it and sends 
+ * its contents through TCP to the user 
+ */
 int get_hint_file(char* PLID)
 {
 
@@ -149,7 +169,6 @@ int get_hint_file(char* PLID)
     ss >> hint_file;
 
     path = "HINTS/" + hint_file;
-    string teste = "teste_" + hint_file;
     hint_file = "";
     FILE* file;
     file = fopen(path.c_str(),"r");
@@ -178,7 +197,9 @@ int get_hint_file(char* PLID)
 }
 
 
-
+/*
+ * Function responsible for receive the client request and process it
+ */
 void process(void)
 {
     std::cout << "Start TCP Process" << std::endl;
@@ -211,16 +232,19 @@ void process(void)
 
 
             if (!strcmp(arg1, "GSB")) {
+                // Th Player asks to receive the top-10 scoreboard.
                 verb_response = "PLID not given: ";
                 verb_response += "Get scoreboard -> ";
                 int status = check_score_file();
                 switch (status) {
-                case STATUS_EMPTY:
+                case STATUS_EMPTY:{
+                    // The scoreboard is still empty (no game was yet won by any player)
                     response = "RSB EMPTY\n";
                     verb_response += "Fail; scoreboard is currently empty (no games have been won yet)\n";
                     break;
-
+                }
                 case STATUS_OK: {
+                    // Sends a text file containing the top-10 scores of the game.
                     string score_file = create_scoreboard();
                     pid_t pid = getpid();
                     string filename = "TOPSCORES_" + std::to_string(pid) + ".txt";
@@ -233,7 +257,7 @@ void process(void)
                 }
 
             } else if (!strcmp(arg1,"GHL")) {
-
+                // The Player asks to receive an image illustrating the class to which the word belongs.
                 verb_response = "PLID = ";
                 verb_response += (string)arg2 + ": ";
                 verb_response += "Get hint file -> ";
@@ -241,6 +265,7 @@ void process(void)
                 int status = check_image(arg2);
                 switch (status) {
                     case STATUS_OK: {
+                        // Sends a file containing the image illustrative of the word class.
                         int size = get_hint_file(arg2);
                         string filename = get_hint_filename(arg2);
                         verb_response += "Success; hint file will be sent under filename " + filename;
@@ -248,6 +273,7 @@ void process(void)
                         break;
                     }
                     case STATUS_NOK:
+                        // There is no file to be sent, or some other problem,
                         response = "RHL NOK\n";
                         verb_response += "Error; PLID may be invalid or no game must be currently ongoing\n";
                         break;
@@ -255,18 +281,21 @@ void process(void)
                 }
 
             } else if (!strcmp(arg1, "STA")) {
-
+                // The Player asks about the state of the ongoing game at the Player.
                 verb_response = "PLID = ";
                 verb_response += (string)arg2 + ": ";
                 verb_response += "Get game state file -> ";
 
                 int status = check_current_state(arg2);
                 switch(status) {
-                    case STATUS_NOK:
+                    case STATUS_NOK: {
+                        // The GS server finds no games (active or finished) for this player
                         response = "RST NOK\n";
                         verb_response += "Error; PLID may be invalid or no games are registered to it yet\n"; 
                         break;
+                    }
                     case STATUS_ACT: {
+                        // There is an ongoing game
                         string active_game = get_active_state(arg2);
                         string fname = "STATE_" + (string)arg2;
                         string f_size = std::to_string(active_game.length());
@@ -277,6 +306,7 @@ void process(void)
                         break;
                     }
                     case STATUS_FIN: {
+                        // There is no ongoing game
                         string last_game = get_last_state(arg2);
                         string fname = "STATE_" + (string)arg2;
                         string f_size = std::to_string(last_game.length());
@@ -329,6 +359,10 @@ void process(void)
     }
 }
 
+
+/* 
+ * Function responsible for end the UDP session
+ */
 void end_TCP_session(void)
 {
     std::cout << "Closing TCP session..." << std::endl;    
@@ -338,6 +372,10 @@ void end_TCP_session(void)
 }
 
 
+/*
+ * Function responsible for the handling of the interruption signal (ctrl + C).
+ * Terminates all the process.
+ */
 void sig_handler(int sig)
 {
     std::cout << "Caught Ctrl-C..." << std::endl;
@@ -350,6 +388,9 @@ void sig_handler(int sig)
 }
 
 
+/*
+ * Function responsible for decode the input and call functions to handle with it.
+ */
 int main(int argc, char* argv[])
 {
     GSPORT = argv[2];

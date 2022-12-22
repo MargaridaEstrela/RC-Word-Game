@@ -1,6 +1,10 @@
 #include "aux_functions.hpp"
 #include "constants.hpp"
 
+
+/* 
+ * Function responsible for check if the given PLID is valid.
+*/
 bool check_PLID(char* PLID)
 {
 
@@ -17,6 +21,11 @@ bool check_PLID(char* PLID)
     return true;
 }
 
+
+/* 
+ * Function responsible for gets the maximum number of errors 
+ * that can be committed before losing the game. 
+ */
 int max_errors(int word_size)
 {
     if (word_size <= 6) {
@@ -28,6 +37,10 @@ int max_errors(int word_size)
     }
 }
 
+
+/* 
+ * Function responsible for return the respective game status
+*/
 int translate_status(std::string state)
 {
     if (state == "OK") {

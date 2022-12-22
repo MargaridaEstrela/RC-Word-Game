@@ -27,7 +27,7 @@ using namespace std;
 string GSIP = "127.0.0.1"; // Default server IP (local host)
 string GSPORT = "58034"; // Default Port
 
-// Session and Game state variables
+// SESSION AND GAME STATE VARIABLES
 int n_trials = -1;
 string PLID = "";
 int n_letters;
@@ -56,6 +56,7 @@ void flag_decoder(int argc, char* argv[])
     if (argc == 1) {
         return;
     }
+
     // Flag handling
     else if (argc == 3 || argc == 5) {
         for (int i = 1; i < argc; i += 2) {
@@ -638,7 +639,7 @@ void guess_command(string guess)
     }
     case STATUS_DUP: {
         n_trials--;
-        cerr << "ERROR: The guess \"" + guess + "\" has already been sent before. Try another word\n";
+        cerr << "ERROR: The guess "" + guess + "" has already been sent before. Try another word\n";
         break;
     }
     default: {
